@@ -1,10 +1,11 @@
 #!/bin/bash
 
-current_directory = $(pwd)
+CURRENT_DIR=$(pwd)
 
 # Start CUDA docker
 docker run --rm \
     --gpus all \
-    -v $current_directory:/app \
+    -v $CURRENT_DIR:/app \
+    -w /app \
     nvidia/cuda:12.2.0-devel-ubuntu22.04 \
-    /bin/bash -c "cd /app && nvcc -o output main.cu -run"
+    /bin/bash -c "make run"
