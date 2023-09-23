@@ -1,0 +1,20 @@
+%% CPU vs GPU Newton-Raphson Benchmark
+% jonathan boylan
+
+clc
+clear
+close all
+%%
+
+results = readmatrix("compare.csv");
+
+N = results(:, 1);
+CPU_ms = results(:, 2) * 1E-6;
+GPU_ms = results(:, 3) * 1E-6;
+
+figure()
+hold on
+plot(N,CPU_ms,'b')
+plot(N,GPU_ms,'g')
+xlabel("")
+legend(["CPU" "GPU"])
