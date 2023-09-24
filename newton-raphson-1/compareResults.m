@@ -6,7 +6,7 @@ clear
 close all
 %%
 
-results = readmatrix("compare.csv");
+results = readmatrix("compare2.csv");
 
 N = results(:, 1);
 CPU_ms = results(:, 2) * 1E-6;
@@ -22,7 +22,7 @@ ylabel("Comp. Time (ms)")
 legend(["CPU" "GPU"])
 
 % remove outliers
-GPU_ms(GPU_ms > 2) = nan;
+GPU_ms(GPU_ms > 5) = nan;
 
 figure('Color', [1 1 1])
 hold on

@@ -6,8 +6,8 @@
 #include <iostream>
 #include <fstream>
 
-#define MAX_N 1000000 // Max number of parabolas
-#define N_INC 100
+#define MAX_N 10000000 // Max number of parabolas
+#define N_INC 10000
 #define K 3 // Number of coefficients
 
 #define MIN_COEFF -10.0F // Inclusive
@@ -117,7 +117,7 @@ int main()
     srand(time(NULL));
 
     std::ofstream myfile;
-    myfile.open("/app/compare.csv");
+    myfile.open("/app/compare2.csv");
     myfile.clear();
 
     for (int N = 0; N < MAX_N; N += N_INC)
@@ -161,10 +161,10 @@ int main()
         cudaMallocManaged(&dev_coeffs, K*N*sizeof(float));
         cudaMallocManaged(&dev_roots, N*sizeof(float));
 
+        time_start = std::chrono::high_resolution_clock::now();
+
         cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice);
-
-        time_start = std::chrono::high_resolution_clock::now();
 
         newton_raphson_parabola_GPU<<<N/TPB, TPB>>>(dev_coeffs, dev_x0s, dev_roots, N);
         cudaDeviceSynchronize();
