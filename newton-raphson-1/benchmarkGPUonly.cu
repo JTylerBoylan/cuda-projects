@@ -6,8 +6,8 @@
 #include <iostream>
 #include <fstream>
 
-#define MAX_N 10000000 // Max number of parabolas
-#define N_INC 10000
+#define MAX_N 100000000 // Max number of parabolas
+#define N_INC 100000
 #define K 3 // Number of coefficients
 
 #define MIN_COEFF -10.0F // Inclusive
@@ -37,24 +37,26 @@ inline int coeff_index(const int n_parabola, const int n_coeff)
 __host__ __device__
 inline float parabola(const float x, const float * coeffs, const float n)
 {
-    const float A = coeffs[coeff_index(n, 1)];
-    const float B = coeffs[coeff_index(n, 2)];
-    const float C = coeffs[coeff_index(n, 3)];
+    const int cindex = coeff_index(n, 0);
+    const float A = coeffs[cindex];
+    const float B = coeffs[cindex + 1];
+    const float C = coeffs[cindex + 2];
     return A*x*x + B*x + C;
 }
 
 __host__ __device__
 inline float d_parabola(const float x, const float * coeffs, const float n)
 {
-    const float A = coeffs[coeff_index(n, 1)];
-    const float B = coeffs[coeff_index(n, 2)];
+    const int cindex = coeff_index(n, 0);
+    const float A = coeffs[cindex];
+    const float B = coeffs[cindex + 1];
     return 2.0F*A*x + B;
 }
 
 __host__ __device__
 inline float d2_parabola(const float x, const float * coeffs, const int n)
 {
-    const float A = coeffs[coeff_index(n, 1)];
+    const float A = coeffs[coeff_index(n, 0)];
     return 2.0F*A;
 }
 
@@ -117,7 +119,7 @@ int main()
     srand(time(NULL));
 
     std::ofstream myfile;
-    myfile.open("/app/compare2.csv");
+    myfile.open("/app/GPUonly.csv");
     myfile.clear();
 
     for (int N = 0; N < MAX_N; N += N_INC)
@@ -138,6 +140,7 @@ int main()
         fillWithRandomFloats(x0s, N, MIN_COEFF, MAX_COEFF);
         fillWithRandomFloats(coeffs, K*N, MIN_COEFF, MAX_COEFF);
 
+        /*
         auto time_start = std::chrono::high_resolution_clock::now();
 
         newton_raphson_parabola_CPU(coeffs, x0s, roots, N);
@@ -147,6 +150,7 @@ int main()
 
         myfile << delta_time.count();
         myfile << ",";
+        */
 
         //printf("CPU Time: %lu ns\n", delta_time.count());
         //print_n_roots(coeffs, roots, 3);
@@ -161,7 +165,7 @@ int main()
         cudaMallocManaged(&dev_coeffs, K*N*sizeof(float));
         cudaMallocManaged(&dev_roots, N*sizeof(float));
 
-        time_start = std::chrono::high_resolution_clock::now();
+        auto time_start = std::chrono::high_resolution_clock::now();
 
         cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice);
@@ -169,8 +173,10 @@ int main()
         newton_raphson_parabola_GPU<<<N/TPB, TPB>>>(dev_coeffs, dev_x0s, dev_roots, N);
         cudaDeviceSynchronize();
 
-        time_end = std::chrono::high_resolution_clock::now();
-        delta_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
+        cudaMemcpy(roots, dev_roots, N, cudaMemcpyDeviceToHost);
+
+        auto time_end = std::chrono::high_resolution_clock::now();
+        auto delta_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
 
         myfile << delta_time.count();
 
