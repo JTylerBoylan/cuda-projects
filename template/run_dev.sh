@@ -2,10 +2,14 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+PROJECT_NAME="my-project"
+
+docker build -t ${PROJECT_NAME} "${SCRIPT_DIR}"
+
 # Start CUDA docker
 docker run -it --rm \
     --gpus all \
     -v $SCRIPT_DIR:/app \
     -w /app \
-    nvidia/cuda:12.2.0-devel-ubuntu22.04 \
+    ${PROJECT_NAME} \
     bash
