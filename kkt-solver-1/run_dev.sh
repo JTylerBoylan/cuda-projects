@@ -2,10 +2,14 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+PROJECT_NAME="kkt-solver-1"
+
+docker build -t ${PROJECT_NAME} "${SCRIPT_DIR}"
+
 # Start CUDA docker
 docker run -it --rm \
     --gpus all \
     -v $SCRIPT_DIR:/app \
     -w /app \
-    kkt-solver-1 \
+    ${PROJECT_NAME} \
     bash
