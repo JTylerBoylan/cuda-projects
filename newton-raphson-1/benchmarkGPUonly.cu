@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <assert.h>
 
 #define MAX_N 100000000 // Max number of parabolas
 #define N_INC 100000
@@ -17,7 +18,19 @@
 #define TOLERANCE 1E-6
 #define EPSILON 1E-6
 
-#define TPB 32
+#define TPB 256
+
+inline cudaError_t checkCuda(cudaError_t result)
+{
+  if (result != cudaSuccess) {
+    fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+    size_t free_, total;
+    cudaMemGetInfo(&free_, &total);
+    printf("Free: %zu, Total: %zu\n", free_, total);
+    assert(result == cudaSuccess);
+  }
+  return result;
+}
 
 void fillWithRandomFloats(float * arr, const int size, const float min_val, const float max_val)
 {
@@ -29,15 +42,15 @@ void fillWithRandomFloats(float * arr, const int size, const float min_val, cons
 }
 
 __host__ __device__
-inline int coeff_index(const int n_parabola, const int n_coeff)
+inline int coeff_index(const int n_parabola)
 {
-    return K*n_parabola + n_coeff;
+    return K*n_parabola;
 }
 
 __host__ __device__
-inline float parabola(const float x, const float * coeffs, const float n)
+inline float parabola(const float x, const float * coeffs, const int n)
 {
-    const int cindex = coeff_index(n, 0);
+    const int cindex = coeff_index(n);
     const float A = coeffs[cindex];
     const float B = coeffs[cindex + 1];
     const float C = coeffs[cindex + 2];
@@ -45,9 +58,9 @@ inline float parabola(const float x, const float * coeffs, const float n)
 }
 
 __host__ __device__
-inline float d_parabola(const float x, const float * coeffs, const float n)
+inline float d_parabola(const float x, const float * coeffs, const int n)
 {
-    const int cindex = coeff_index(n, 0);
+    const int cindex = coeff_index(n);
     const float A = coeffs[cindex];
     const float B = coeffs[cindex + 1];
     return 2.0F*A*x + B;
@@ -56,7 +69,7 @@ inline float d_parabola(const float x, const float * coeffs, const float n)
 __host__ __device__
 inline float d2_parabola(const float x, const float * coeffs, const int n)
 {
-    const float A = coeffs[coeff_index(n, 0)];
+    const float A = coeffs[coeff_index(n)];
     return 2.0F*A;
 }
 
@@ -87,7 +100,7 @@ float get_root(const float * coeffs, const int n, float x0)
     return INFINITY;
 }
 
-void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float * roots, const float size)
+void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float * roots, const int size)
 {
     for (int p = 0; p < size; p++)
     {
@@ -96,19 +109,21 @@ void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float 
 }
 
 __global__
-void newton_raphson_parabola_GPU(const float * coeffs, const float * x0s, float * roots, const float size)
+void newton_raphson_parabola_GPU(const float * coeffs, const float * x0s, float * roots, const int size)
 {
     const int p = blockIdx.x*blockDim.x + threadIdx.x;
-    roots[p] = get_root(coeffs, p, x0s[p]);
+    if (p < size)
+        roots[p] = get_root(coeffs, p, x0s[p]);
 }
 
-void print_n_roots(const float * coeffs, const float *roots, const float n)
+void print_n_roots(const float * coeffs, const float *roots, const int n)
 {
     for (int p = 0; p < n; p++)
     {
-        const float A = coeffs[coeff_index(p, 1)];
-        const float B = coeffs[coeff_index(p, 2)];
-        const float C = coeffs[coeff_index(p, 3)];
+        const int cindex = coeff_index(n);
+        const float A = coeffs[cindex];
+        const float B = coeffs[cindex + 1];
+        const float C = coeffs[cindex + 2];
         float root = roots[p];
         printf("%.3fx^2 + %.3fx + %.3f has a root of %.3f\n", A, B, C, root);
     }
@@ -122,7 +137,7 @@ int main()
     myfile.open("/app/GPUonly.csv");
     myfile.clear();
 
-    for (int N = 0; N < MAX_N; N += N_INC)
+    for (int N = N_INC; N <= MAX_N; N += N_INC)
     {
 
         printf("%d\n", N);
@@ -131,8 +146,6 @@ int main()
         myfile << N;
         myfile << ",";
 
-        // CPU
-
         float * x0s = (float*) calloc(N, sizeof(float));
         float * coeffs = (float*) calloc(K*N, sizeof(float));
         float * roots = (float*) calloc(N, sizeof(float));
@@ -140,40 +153,27 @@ int main()
         fillWithRandomFloats(x0s, N, MIN_COEFF, MAX_COEFF);
         fillWithRandomFloats(coeffs, K*N, MIN_COEFF, MAX_COEFF);
 
-        /*
-        auto time_start = std::chrono::high_resolution_clock::now();
-
-        newton_raphson_parabola_CPU(coeffs, x0s, roots, N);
-
-        auto time_end = std::chrono::high_resolution_clock::now();
-        auto delta_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
-
-        myfile << delta_time.count();
-        myfile << ",";
-        */
-
-        //printf("CPU Time: %lu ns\n", delta_time.count());
-        //print_n_roots(coeffs, roots, 3);
-
-        // GPU
-
         float * dev_x0s = 0;
         float * dev_coeffs = 0;
         float * dev_roots = 0;
 
-        cudaMallocManaged(&dev_x0s, N*sizeof(float));
-        cudaMallocManaged(&dev_coeffs, K*N*sizeof(float));
-        cudaMallocManaged(&dev_roots, N*sizeof(float));
+        checkCuda( cudaMallocManaged(&dev_x0s, N*sizeof(float)) );
+        checkCuda( cudaMallocManaged(&dev_coeffs, K*N*sizeof(float)) );
+        checkCuda( cudaMallocManaged(&dev_roots, N*sizeof(float)) );
+
+        size_t number_of_blocks = (N + TPB - 1) / TPB;
 
         auto time_start = std::chrono::high_resolution_clock::now();
 
-        cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice);
+        checkCuda( cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice) );
+        checkCuda( cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice) );
 
-        newton_raphson_parabola_GPU<<<N/TPB, TPB>>>(dev_coeffs, dev_x0s, dev_roots, N);
-        cudaDeviceSynchronize();
+        newton_raphson_parabola_GPU<<<number_of_blocks, TPB>>>(dev_coeffs, dev_x0s, dev_roots, N);
+        checkCuda(cudaGetLastError());
 
-        cudaMemcpy(roots, dev_roots, N, cudaMemcpyDeviceToHost);
+        checkCuda( cudaDeviceSynchronize() );
+
+        checkCuda( cudaMemcpy(roots, dev_roots, N*sizeof(float), cudaMemcpyDeviceToHost) );
 
         auto time_end = std::chrono::high_resolution_clock::now();
         auto delta_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
@@ -181,7 +181,7 @@ int main()
         myfile << delta_time.count();
 
         //printf("GPU Time: %lu ns\n", delta_time.count());
-        //print_n_roots(dev_coeffs, dev_roots, 3);
+        //print_n_roots(coeffs, roots, 1);
 
         myfile << "\n";
 

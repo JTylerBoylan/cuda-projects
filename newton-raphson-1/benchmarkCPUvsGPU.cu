@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <assert.h>
 
 #define MAX_N 10000000 // Max number of parabolas
 #define N_INC 10000
@@ -17,7 +18,16 @@
 #define TOLERANCE 1E-6
 #define EPSILON 1E-6
 
-#define TPB 32
+#define TPB 256
+
+inline cudaError_t checkCuda(cudaError_t result)
+{
+  if (result != cudaSuccess) {
+    fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+    assert(result == cudaSuccess);
+  }
+  return result;
+}
 
 void fillWithRandomFloats(float * arr, const int size, const float min_val, const float max_val)
 {
@@ -87,7 +97,7 @@ float get_root(const float * coeffs, const int n, float x0)
     return INFINITY;
 }
 
-void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float * roots, const float size)
+void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float * roots, const int size)
 {
     for (int p = 0; p < size; p++)
     {
@@ -96,19 +106,20 @@ void newton_raphson_parabola_CPU(const float * coeffs, const float * x0s, float 
 }
 
 __global__
-void newton_raphson_parabola_GPU(const float * coeffs, const float * x0s, float * roots, const float size)
+void newton_raphson_parabola_GPU(const float * coeffs, const float * x0s, float * roots, const int size)
 {
     const int p = blockIdx.x*blockDim.x + threadIdx.x;
-    roots[p] = get_root(coeffs, p, x0s[p]);
+    if (p < size)
+        roots[p] = get_root(coeffs, p, x0s[p]);
 }
 
 void print_n_roots(const float * coeffs, const float *roots, const float n)
 {
     for (int p = 0; p < n; p++)
     {
-        const float A = coeffs[coeff_index(p, 1)];
-        const float B = coeffs[coeff_index(p, 2)];
-        const float C = coeffs[coeff_index(p, 3)];
+        const float A = coeffs[coeff_index(p, 0)];
+        const float B = coeffs[coeff_index(p, 1)];
+        const float C = coeffs[coeff_index(p, 2)];
         float root = roots[p];
         printf("%.3fx^2 + %.3fx + %.3f has a root of %.3f\n", A, B, C, root);
     }
@@ -122,7 +133,7 @@ int main()
     myfile.open("/app/CPUvsGPU.csv");
     myfile.clear();
 
-    for (int N = 0; N < MAX_N; N += N_INC)
+    for (int N = N_INC; N <= MAX_N; N += N_INC)
     {
 
         printf("%d\n", N);
@@ -151,7 +162,7 @@ int main()
         myfile << ",";
 
         //printf("CPU Time: %lu ns\n", delta_time.count());
-        //print_n_roots(coeffs, roots, 3);
+        //print_n_roots(coeffs, roots, 10);
 
         // GPU
 
@@ -159,19 +170,20 @@ int main()
         float * dev_coeffs = 0;
         float * dev_roots = 0;
 
-        cudaMallocManaged(&dev_x0s, N*sizeof(float));
-        cudaMallocManaged(&dev_coeffs, K*N*sizeof(float));
-        cudaMallocManaged(&dev_roots, N*sizeof(float));
+        checkCuda( cudaMallocManaged(&dev_x0s, N*sizeof(float)) );
+        checkCuda( cudaMallocManaged(&dev_coeffs, K*N*sizeof(float)) );
+        checkCuda( cudaMallocManaged(&dev_roots, N*sizeof(float)) );
 
         time_start = std::chrono::high_resolution_clock::now();
 
-        cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice);
+        checkCuda( cudaMemcpy(dev_x0s, x0s, N*sizeof(float), cudaMemcpyHostToDevice) );
+        checkCuda( cudaMemcpy(dev_coeffs, coeffs, K*N*sizeof(float), cudaMemcpyHostToDevice) );
 
         newton_raphson_parabola_GPU<<<N/TPB, TPB>>>(dev_coeffs, dev_x0s, dev_roots, N);
-        cudaDeviceSynchronize();
 
-        cudaMemcpy(roots, dev_roots, N, cudaMemcpyDeviceToHost);
+        checkCuda( cudaDeviceSynchronize() );
+
+        checkCuda( cudaMemcpy(roots, dev_roots, N, cudaMemcpyDeviceToHost) );
 
         time_end = std::chrono::high_resolution_clock::now();
         delta_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_end - time_start);
@@ -179,7 +191,7 @@ int main()
         myfile << delta_time.count();
 
         //printf("GPU Time: %lu ns\n", delta_time.count());
-        //print_n_roots(dev_coeffs, dev_roots, 3);
+        //print_n_roots(coeffs, roots, 10);
 
         myfile << "\n";
 
