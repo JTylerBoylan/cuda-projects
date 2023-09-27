@@ -42,7 +42,6 @@ void initialize(std::vector<float>& x0, std::vector<float>& lambda0, std::vector
 
 
 
-inline cudaError_t checkCuda(cudaError_t result);
 
 void create_index_vector(std::vector<symbol_ptr>& vec, const int size, const std::string var);
 
@@ -216,15 +215,6 @@ int main()
 
 
   return 0;
-}
-
-inline cudaError_t checkCuda(cudaError_t result)
-{
-  if (result != cudaSuccess) {
-    fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
-    assert(result == cudaSuccess);
-  }
-  return result;
 }
 
 // Fill an expression vector with indexed variables
