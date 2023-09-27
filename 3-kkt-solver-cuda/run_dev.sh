@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-PROJECT_NAME="kkt-solver-cpp"
+PROJECT_NAME="kkt-solver-cuda"
 
 docker build -t ${PROJECT_NAME} "${SCRIPT_DIR}"
 
