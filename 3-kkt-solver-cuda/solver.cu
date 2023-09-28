@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -60,8 +61,6 @@ void solve(float * w, float * cost, bool * sol)
 int main()
 {
 
-  setup_lookup<<<1,1>>>(LOOKUP_INTERCEPT, LOOKUP_INITIAL);
-
   // Allocate
   float * w;
   float * cost;
@@ -75,7 +74,12 @@ int main()
   checkCuda( cudaDeviceSynchronize() );
 
   // Print Results
-  /* TODO */
+  for (int i = 0; i < NUM_OBJECTIVES*NUM_VARIABLES; i++)
+  {
+    printf("W(%d) = %f ", i, w[i]);
+    printf("%s ", sol[i] ? "(solved)" : "(unsolved)");
+    printf("cost = %f\n", cost[i]);
+  }
 
   // Free
   checkCuda( cudaFree(w) );

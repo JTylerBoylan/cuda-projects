@@ -1,11 +1,9 @@
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 #include <string>
-#include <time.h>
 #include <math.h>
 #include <vector>
-#include <chrono>
 #include <memory>
 #include <assert.h>
 #include <ginac/ginac.h>
@@ -31,11 +29,25 @@ ex objective_function(std::vector<symbol_ptr>& x)
 // g(x) <= 0
 matrix inequality_constraints(std::vector<symbol_ptr>& x)
 {
-  matrix constraints(3,1);
+  matrix constraints(NUM_CONSTRAINTS,1);
   constraints(0,0) = (*x[0]) - 1;
   constraints(1,0) = (*x[1]) - 0;
   constraints(2,0) = -(*x[0]) + 1;
   return constraints;
+}
+
+std::vector<float> initial_variables()
+{
+  return {
+    -0.9, // x0
+    0.1, // x1
+    1.0, // lam0
+    1.0, // lam1
+    1.0, // lam2
+    1.0, // s0
+    1.0, // s1
+    1.0, // s2
+  };
 }
 
 
@@ -49,37 +61,69 @@ matrix diff_vec_by_vec(const matrix& ex_vec, const std::vector<symbol_ptr>& sym_
 int main()
 {
 
+  // Get initial values
+  const std::vector<float> w0 = initial_variables();
+  printf("Retrieved initial variables.\n");
+
   // Create expression vectors
   std::vector<symbol_ptr> w;
-  create_index_vector(w, NUM_STATES, "w");
+  create_index_vector(w, NUM_VARIABLES, "w");
 
   // Get ineq. constraint vector
   const matrix g = inequality_constraints(w);
+  printf("Retrieved constraint matrix.\n");
 
-  assert(g.cols() == NUM_CONSTRAINTS);
+  assert(g.rows() == NUM_CONSTRAINTS);
+
+  // Objective function
+  ex objective = objective_function(w);
+  printf("Retrieved objective function.\n");
 
   // Lagrange equation
-  ex lagrange_equation = objective_function(w);
+  ex lagrange_equation = objective;
   for (int l = 0; l < NUM_CONSTRAINTS; l++)
   {
     const symbol_ptr lambda = w[NUM_STATES+l];
     const symbol_ptr s = w[NUM_STATES+NUM_CONSTRAINTS+l];
     lagrange_equation += (*lambda)*(g(l,0) + (*s)*(*s));
   }
+  printf("Calculated lagrangian equation.\n");
 
   // Get the jacobian of the objective w.r.t the symbols
   const matrix KKT = diff_function_by_vec(lagrange_equation, w);
+  printf("Calculated KKT conditions.\n");
 
-  // Get the hessian of the objective w.r.t the symbols
-  const matrix hessian = diff_vec_by_vec(KKT, w);
+  // Get the jacobian of the objective w.r.t the symbols
+  const matrix jacobian = diff_vec_by_vec(KKT, w);
+  printf("Calculated jacobian.\n");
 
-  // Get the inverse of the hessian
-  const matrix inv_hessian = inverse(hessian);
+  // Get the inverse of the jacobian
+  const matrix inv_jacobian = inverse(jacobian);
+  printf("Calculated inverse jacobian.\n");
 
-  // Get the inverse hessian * KKT
-  matrix inv_hess_KKT = inv_hessian.mul(KKT);
+  // Get the inverse jacobian * KKT
+  matrix inv_jacobian_KKT = inv_jacobian.mul(KKT);
+  printf("Calculated inverse jacobian by KKT conditions.\n");
 
-  print_j(inv_hess_KKT);
+  std::ofstream cu;
+  cu.open("/app/GENERATED_LOOKUP.cu");
+  cu.clear();
+  cu << generate_lookup_header(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_cost_function(objective);
+  for (int p = 0; p < NUM_OBJECTIVES; p++)
+  {
+    for (int v = 0; v < NUM_VARIABLES; v++)
+    {
+      cu << generate_winitial_definition(w0[v], p, v);
+      cu << generate_expression_function(inv_jacobian_KKT(v,0), p, v);
+    }
+  }
+  cu << generate_lookup_intercept(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_lookup_initials(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_lookup_ender();
+  printf("Generated _GENERATED_LOOKUP.cu file.\n");
+
+  printf("Done.\n");
 
   return 0;
 }
@@ -114,15 +158,15 @@ matrix diff_vec_by_vec(const matrix& ex_vec, const std::vector<symbol_ptr>& sym_
   const size_t ex_vec_size = ex_vec.rows();
   const size_t sym_vec_size = sym_vec.size();
 
-  matrix hessian(ex_vec_size, sym_vec_size);
+  matrix jacobian(ex_vec_size, sym_vec_size);
   for (int r = 0; r < ex_vec_size; r++)
   {
     const ex& expr = ex_vec[r];
     for (int c = 0; c < sym_vec_size; c++)
     {
       const symbol_ptr sym = sym_vec[c];
-      hessian(r,c) = expr.diff(*sym);
+      jacobian(r,c) = expr.diff(*sym);
     }
   }
-  return hessian;
+  return jacobian;
 }

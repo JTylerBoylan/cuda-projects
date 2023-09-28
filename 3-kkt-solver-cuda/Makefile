@@ -13,26 +13,19 @@ LIBRARY_PATH = -L/usr/local/lib
 # Libraries to link against
 LIBRARIES = -lginac -lcln
 
-# Source and Object files
-SOLVER_SRC = $(wildcard *.cu)
-GENERATE_SRC = $(wildcard *.cpp)
-
-SOLVER_OBJ = $(SOLVER_SRC:.cu=.o)
-GENERATE_OBJ = $(GENERATE_SRC:.cpp=.o)
-
 all: solver generator
 
-solver: $(SOLVER_OBJ)
-	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o $@ $^ $(LIBRARIES)
+solver: solver.o
+	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o solver solver.o $(LIBRARIES)
 
-generator: $(GENERATE_OBJ)
-	$(CXX) $(CXX_FLAGS) $(LIBRARY_PATH) -o $@ $^ $(LIBRARIES)
+generator: generator.o
+	$(CXX) $(CXX_FLAGS) $(LIBRARY_PATH) -o generator generator.o $(LIBRARIES)
 
-%.o: %.cu
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_PATH) -c $< -o $@
+solver.o: solver.cu GENERATED_LOOKUP.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_PATH) -c solver.cu -o solver.o
 
-%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c $< -o $@
+generator.o: generate_cuda.cpp generate_util.cpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c generate_cuda.cpp -o generator.o
 
 clean:
-	rm -f $(SOLVER_OBJ) $(GENERATE_OBJ) $(SOLVER_TARGET) $(GENERATE_TARGET)
+	rm -f solver generator *.o

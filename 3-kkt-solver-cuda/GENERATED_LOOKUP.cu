@@ -1,47 +1,83 @@
 #ifndef KKT_SOLVER_GENERATED_LOOKUP_CU_
 #define KKT_SOLVER_GENERATED_LOOKUP_CU_
 
-#define NUM_OBJECTIVES 2
+#define NUM_OBJECTIVES 1
 #define NUM_VARIABLES 8
 
 typedef float (*intercept_ptr)(float*);
 
-__device__ float COST(float * w)
+__device__
+float COST(float * w)
 {
-    // ...
+return  (w[0]*w[0])+(w[1]*w[1]);
 }
 
-__constant__ float w0_0_0;
-__device__ float j_0_0(float * w)
+#define WI_0_0 -0.9
+__device__
+float j_0_0(float * w)
 {
-    // ...
+return  2.0*(w[7]*w[7])*w[4]*(w[5]*w[5])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+(w[7]*w[7])*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))*( w[0]+(w[5]*w[5])-1.0)+w[4]*(w[5]*w[5])*( w[0]-(w[7]*w[7])-1.0)/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+2.0*(w[7]*w[7])*(w[5]*w[5])*( 2.0*w[0]-w[4]+w[2])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+-2.0*(w[7]*w[7])*(w[5]*w[5])*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]));
 }
 
-__constant__ float w0_0_1;
-__device__ float j_0_1(float * w)
+#define WI_0_1 0.1
+__device__
+float j_0_1(float * w)
 {
-    // ...
+return  w[3]*( w[1]+(w[6]*w[6]))/( w[3]+4.0*(w[6]*w[6]))+2.0*( w[3]+2.0*w[1])/( w[3]+4.0*(w[6]*w[6]))*(w[6]*w[6])+-2.0*w[3]/( w[3]+4.0*(w[6]*w[6]))*(w[6]*w[6]);
 }
 
-// ...
-
-__constant__ float w0_N_M;
-__device__ float j_N_M(float * w)
+#define WI_0_2 1
+__device__
+float j_0_2(float * w)
 {
-    // ...
+return  (w[7]*w[7])*( 2.0*w[0]-w[4]+w[2])*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-( 4.0*(w[7]*w[7])*w[2]+w[4]*w[2])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))*( w[0]+(w[5]*w[5])-1.0)/2.0+w[4]*( w[0]-(w[7]*w[7])-1.0)*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))/2.0+(w[7]*w[7])*w[4]*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+( 4.0*(w[7]*w[7])*w[5]+w[4]*w[5])*w[5]*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]));
 }
 
-__constant__ intercept_ptr LOOKUP_INTERCEPT[NUM_OBJECTIVES*NUM_VARIABLES]; // to be initialized from host
-__constant__ float LOOKUP_INITIAL[NUM_OBJECTIVES*NUM_VARIABLES];  // to be initialized from host
-
-__global__ void setup_lookup(intercept_ptr* lookup_intercept, float* lookup_initial)
+#define WI_0_3 1
+__device__
+float j_0_3(float * w)
 {
-    lookup_intercept[0] = j_0_0;
-    lookup_intercept[1] = j_0_1;
-    // ...
-    lookup_initial[0] = w0_0_0;
-    lookup_initial[1] = w0_0_1;
-    // ...
+return  w[3]*( w[3]+2.0*w[1])/( w[3]+4.0*(w[6]*w[6]))+-2.0*w[3]*( w[1]+(w[6]*w[6]))/( w[3]+4.0*(w[6]*w[6]))+4.0*w[3]/( w[3]+4.0*(w[6]*w[6]))*(w[6]*w[6]);
 }
+
+#define WI_0_4 1
+__device__
+float j_0_4(float * w)
+{
+return  w[4]*(w[5]*w[5])*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-w[4]*(w[5]*w[5])*( 2.0*w[0]-w[4]+w[2])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+( w[0]-(w[7]*w[7])-1.0)*( w[4]*w[2]+4.0*w[4]*(w[5]*w[5]))/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))/2.0+( 4.0*w[7]*(w[5]*w[5])+w[7]*w[2])*w[7]*w[4]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-w[4]*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))*( w[0]+(w[5]*w[5])-1.0)/2.0;
+}
+
+#define WI_0_5 1
+__device__
+float j_0_5(float * w)
+{
+return  (w[7]*w[7])*w[5]*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+( 4.0*(w[7]*w[7])*w[5]+w[4]*w[5])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))*( w[0]+(w[5]*w[5])-1.0)/2.0-(w[7]*w[7])*w[5]*( 2.0*w[0]-w[4]+w[2])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-w[4]*w[5]*( w[0]-(w[7]*w[7])-1.0)/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))/2.0-(w[7]*w[7])*w[4]*w[5]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]));
+}
+
+#define WI_0_6 1
+__device__
+float j_0_6(float * w)
+{
+return -( w[3]+2.0*w[1])/( w[3]+4.0*(w[6]*w[6]))*w[6]+2.0*( w[1]+(w[6]*w[6]))/( w[3]+4.0*(w[6]*w[6]))*w[6]+w[3]/( w[3]+4.0*(w[6]*w[6]))*w[6];
+}
+
+#define WI_0_7 1
+__device__
+float j_0_7(float * w)
+{
+return  w[7]*(w[5]*w[5])*( 2.0*w[0]-w[4]+w[2])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-w[7]*(w[5]*w[5])*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))-( 4.0*w[7]*(w[5]*w[5])+w[7]*w[2])*( w[0]-(w[7]*w[7])-1.0)/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))/2.0+w[7]*w[4]*(w[5]*w[5])/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))+w[7]*w[2]/( (w[7]*w[7])*w[2]+4.0*(w[7]*w[7])*(w[5]*w[5])+w[4]*(w[5]*w[5]))*( w[0]+(w[5]*w[5])-1.0)/2.0;
+}
+
+__constant__
+intercept_ptr LOOKUP_INTERCEPT[8] =
+{
+j_0_0, j_0_1, j_0_2, j_0_3, j_0_4, j_0_5, j_0_6, j_0_7, 
+};
+
+__constant__
+float LOOKUP_INITIAL[8] =
+{
+WI_0_0, WI_0_1, WI_0_2, WI_0_3, WI_0_4, WI_0_5, WI_0_6, WI_0_7, 
+};
 
 #endif
