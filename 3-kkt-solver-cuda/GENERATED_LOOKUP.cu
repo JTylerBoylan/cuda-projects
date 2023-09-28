@@ -11,13 +11,13 @@ __device__ float COST(float * w)
     // ...
 }
 
-__constant__ float w0_0_0 = 0.0f;
+__constant__ float w0_0_0;
 __device__ float j_0_0(float * w)
 {
     // ...
 }
 
-__constant__ float w0_0_1  = 0.0f;
+__constant__ float w0_0_1;
 __device__ float j_0_1(float * w)
 {
     // ...
@@ -25,7 +25,7 @@ __device__ float j_0_1(float * w)
 
 // ...
 
-__constant__ float w0_N_M = 0.0f;
+__constant__ float w0_N_M;
 __device__ float j_N_M(float * w)
 {
     // ...
