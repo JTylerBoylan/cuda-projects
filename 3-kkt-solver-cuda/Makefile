@@ -1,8 +1,10 @@
-# Compiler
+# Compilers
 NVCC = nvcc
+CXX = g++
 
 # Compiler flags
 NVCC_FLAGS = -O3
+CXX_FLAGS = -O3
 
 # Include and Library paths
 INCLUDE_PATH = -I/usr/local/include
@@ -12,17 +14,25 @@ LIBRARY_PATH = -L/usr/local/lib
 LIBRARIES = -lginac -lcln
 
 # Source and Object files
-SRC = main.cu
-OBJ = main.o
-TARGET = main
+SOLVER_SRC = $(wildcard *.cu)
+GENERATE_SRC = $(wildcard *.cpp)
 
-all: $(TARGET)
+SOLVER_OBJ = $(SOLVER_SRC:.cu=.o)
+GENERATE_OBJ = $(GENERATE_SRC:.cpp=.o)
 
-$(TARGET): $(OBJ)
+all: solver generator
+
+solver: $(SOLVER_OBJ)
 	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o $@ $^ $(LIBRARIES)
 
-$(OBJ): $(SRC)
+generator: $(GENERATE_OBJ)
+	$(CXX) $(CXX_FLAGS) $(LIBRARY_PATH) -o $@ $^ $(LIBRARIES)
+
+%.o: %.cu
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_PATH) -c $< -o $@
 
+%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c $< -o $@
+
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(SOLVER_OBJ) $(GENERATE_OBJ) $(SOLVER_TARGET) $(GENERATE_TARGET)
