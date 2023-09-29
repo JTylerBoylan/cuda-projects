@@ -9,7 +9,7 @@
 #include "GENERATED_LOOKUP.cu"
 
 #define NUM_ITERATIONS 50
-#define TOLERANCE 1E-6
+#define TOLERANCE 1E-4
 
 inline cudaError_t checkCuda(cudaError_t result);
 
@@ -36,7 +36,8 @@ void solve(float * w, float * cost, bool * sol)
 
   // Indices
   const int varIdx = threadIdx.x;
-  const int globalIdx = blockIdx.x*NUM_VARIABLES + varIdx;
+  const int objIdx = blockIdx.x;
+  const int globalIdx = objIdx*NUM_VARIABLES + varIdx;
 
   // Initialize
   if (varIdx == 0)
@@ -73,8 +74,11 @@ void solve(float * w, float * cost, bool * sol)
 
   // Save results
   w[globalIdx] = wi[varIdx];
-  cost[globalIdx] = COST(wi);
-  sol[globalIdx] = solved;
+  if (varIdx == 0)
+  {
+    cost[objIdx] = COST(wi);
+    sol[objIdx] = solved;
+  }
 
 }
 
@@ -88,8 +92,8 @@ int main()
   float * cost;
   bool * sol;
   checkCuda( cudaMallocManaged(&w, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
-  checkCuda( cudaMallocManaged(&cost, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
-  checkCuda( cudaMallocManaged(&sol, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(bool)) );
+  checkCuda( cudaMallocManaged(&cost, NUM_OBJECTIVES*sizeof(float)) );
+  checkCuda( cudaMallocManaged(&sol, NUM_OBJECTIVES*sizeof(bool)) );
 
   // Solve
   auto cstart = std::chrono::high_resolution_clock::now();
@@ -104,13 +108,18 @@ int main()
   printf("Cycles: %lu, Time: %lu us\n", CYCLES, time_us);
   printf("Performance: %lu cycles/s\n", CYCLES*(1000000L)/time_us);
 
+  float solution[] = {1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0};
+
   // Print Results
+  float squared_sum_err = 0.0f;
   for (int i = 0; i < NUM_OBJECTIVES*NUM_VARIABLES; i++)
   {
+    squared_sum_err += (w[i] - solution[i])*(w[i] - solution[i]);
     printf("W(%d) = %f ", i, w[i]);
-    printf("%s ", sol[i] ? "(solved)" : "(unsolved)");
-    printf("cost = %f\n", cost[i]);
+    printf("%s ", sol[i/NUM_VARIABLES] ? "(solved)" : "(unsolved)");
+    printf("cost = %f\n", cost[i/NUM_VARIABLES]);
   }
+  printf("Error: %f\n", squared_sum_err);
 
   // Free
   checkCuda( cudaFree(w) );
