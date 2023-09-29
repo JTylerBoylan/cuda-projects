@@ -115,6 +115,7 @@ int main()
   for (int cyc = 0; cyc < CYCLES; cyc++)
   {
     generate_coefficients<<<NUM_OBJECTIVES, NUM_COEFFICIENTS>>>(NUM_OBJECTIVES*NUM_COEFFICIENTS, coeffs);
+    checkCuda( cudaDeviceSynchronize() );
     solve<<<NUM_OBJECTIVES, NUM_VARIABLES>>>(w, coeffs, cost, sol);
     checkCuda( cudaDeviceSynchronize() );
   }

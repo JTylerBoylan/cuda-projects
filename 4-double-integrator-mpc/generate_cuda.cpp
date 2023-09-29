@@ -13,9 +13,18 @@
 #include "generate_util.cpp"
 
 #define NUM_OBJECTIVES 100
-#define NUM_STATES 2
-#define NUM_CONSTRAINTS 3
-#define NUM_COEFFICIENTS 2
+
+// MPC Params
+#define NUM_NODES 2
+#define HORIZON_TIME 1.0F
+#define DELTA_TIME HORIZON_TIME/NUM_NODES
+
+// Solver Params
+#define NUM_STATES 3*NUM_NODES
+#define NUM_CONSTRAINTS 4*NUM_NODES
+#define NUM_COEFFICIENTS 0
+
+#define NUM_VARIABLES NUM_STATES+2*NUM_CONSTRAINTS
 
 using namespace GiNaC;
 
@@ -24,34 +33,52 @@ using symbol_ptr = std::shared_ptr<symbol>;
 // f(x) = cost function
 ex objective_function(std::vector<symbol_ptr>& x, std::vector<symbol_ptr>& coeffs, const int index)
 {
-  return (*coeffs[0])*(*x[0])*(*x[0]) + (*coeffs[1])*(*x[1])*(*x[1]);
+  (void) coeffs; // unused
+  (void) index; // unused
+
+  ex objective;
+  for (int i = 0; i < NUM_STATES; i++)
+  {
+    objective += (*x[i])*(*x[i]);
+  }
+  return objective;
 }
 
 // g(x) <= 0
 matrix inequality_constraints(std::vector<symbol_ptr>& x, std::vector<symbol_ptr>& coeffs, const int index)
 {
   (void) coeffs; // unused
-  matrix constraints(NUM_CONSTRAINTS,1);
-  constraints(0,0) = (*x[0]) - 1;
-  constraints(1,0) = (*x[1]) - 0;
-  constraints(2,0) = -(*x[0]) + 1;
-  return constraints;
+  (void) index; // unused
+  matrix inequality(NUM_CONSTRAINTS, 1);
+  for (int i = 0; i < NUM_NODES; i++)
+  {
+    const int xi = i;
+    const int vi = 1*NUM_NODES + i;
+    const int ui = 2*NUM_NODES + i;
+    const int ci = 4*i;
+    inequality(ci, 0) = (*x[xi+1]) - (*x[xi]) - (*x[vi])*DELTA_TIME;
+    inequality(ci+1, 0) = -(*x[xi+1]) + (*x[xi]) + (*x[vi])*DELTA_TIME;
+    inequality(ci+2, 0) = (*x[vi+1]) - (*x[vi]) - (*x[ui])*DELTA_TIME;
+    inequality(ci+3, 0) = -(*x[vi+1]) + (*x[vi]) + (*x[ui])*DELTA_TIME;
+  }
+  return inequality;
 }
 
 std::vector<float> initial_variables(const int index)
 {
-  const float max_val = 1.0;
-  const float min_val = -1.0;
-  return {
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // x0
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // x1
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // lam0
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // lam1
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // lam2
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // s0
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // s1
-    (max_val - min_val)*(((float) rand()) / ((float) RAND_MAX)) + min_val, // s2
-  };
+  const float mu = 0.0;
+  const float sigma = 5.0;
+
+  auto const seed = std::random_device{}();
+  auto urbg = std::mt19937{seed};
+  auto norm = std::normal_distribution<float>{mu, sigma};
+
+  std::vector<float> inits(NUM_VARIABLES);
+  for (int i = 0; i < NUM_VARIABLES; i++)
+  {
+    inits[i] = norm(urbg);
+  }
+  return inits;
 }
 
 /*
@@ -60,15 +87,11 @@ std::vector<float> initial_variables(const int index)
 
 */
 
-#define NUM_VARIABLES NUM_STATES+2*NUM_CONSTRAINTS
-
 void create_index_vector(std::vector<symbol_ptr>& vec, const int size, const std::string var);
 matrix calculate_inv_J_KKT(std::vector<symbol_ptr> w, const ex& objective, const matrix& inequality);
 
 int main()
 {
-
-  srand(time(NULL));
 
   std::ofstream cu;
   cu.open("/app/GENERATED_LOOKUP.cu");
@@ -113,7 +136,7 @@ int main()
   cu << generate_lookup_initials(NUM_OBJECTIVES, NUM_VARIABLES);
   cu << generate_lookup_objective(NUM_OBJECTIVES);
   cu << generate_lookup_ender();
-  printf("Generated _GENERATED_LOOKUP.cu file.\n");
+  printf("Generated GENERATED_LOOKUP.cu file.\n");
 
   printf("Done.\n");
 
