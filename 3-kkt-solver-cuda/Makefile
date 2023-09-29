@@ -13,7 +13,7 @@ LIBRARY_PATH = -L/usr/local/lib
 # Libraries to link against
 LIBRARIES = -lginac -lcln
 
-all: solver generator
+all: generator solver
 
 solver: solver.o
 	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o solver solver.o $(LIBRARIES)

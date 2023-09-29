@@ -37,7 +37,8 @@ std::string generate_winitial_definition(const float val, const int np, const in
 {
     std::ostringstream oss;
     oss
-    << "#define WI_" << np << "_" << nv << " " <<  val << "\n"
+    << std::setprecision(5) << std::fixed
+    << "#define WI_" << np << "_" << nv << " " << val << "F\n"
     ;
     return oss.str(); 
 }
