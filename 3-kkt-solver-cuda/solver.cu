@@ -9,7 +9,7 @@
 #include "GENERATED_LOOKUP.cu"
 
 #define NUM_ITERATIONS 50
-#define TOLERANCE 1E-4
+#define TOLERANCE 1E-2
 
 inline cudaError_t checkCuda(cudaError_t result);
 
@@ -25,7 +25,7 @@ float squared_sum(float * w)
 }
 
 __global__
-void solve(float * w, float * cost, bool * sol)
+void solve(float * w, float * coeffs, float * cost, bool * sol)
 {
   assert(NUM_VARIABLES == blockDim.x);
 
@@ -57,7 +57,7 @@ void solve(float * w, float * cost, bool * sol)
     if (solved) break;
 
     // Evaluate from global lookup function
-    diffi[varIdx] = LOOKUP_INTERCEPT[globalIdx](wi);
+    diffi[varIdx] = LOOKUP_INTERCEPT[globalIdx](wi, &coeffs[objIdx]);
 
     // Apply
     wi[varIdx] -= diffi[varIdx];
@@ -76,10 +76,23 @@ void solve(float * w, float * cost, bool * sol)
   w[globalIdx] = wi[varIdx];
   if (varIdx == 0)
   {
-    cost[objIdx] = COST(wi);
+    cost[objIdx] = LOOKUP_OBJECTIVE[objIdx](wi, &coeffs[objIdx]);
     sol[objIdx] = solved;
   }
 
+}
+
+__global__
+void generate_coefficients(const int size, float * coeffs)
+{
+  const int index = blockDim.x*blockIdx.x + threadIdx.x;
+
+  const float maxVal = 0.5F;
+  const float minVal = 0.25F;
+
+  float coeffVal = minVal + (float(index)/float(size))*(maxVal - minVal);
+
+  coeffs[index] = index % 2 == 0 ? coeffVal : 1 - coeffVal;
 }
 
 #define CYCLES 10000L
@@ -89,9 +102,11 @@ int main()
 
   // Allocate
   float * w;
+  float * coeffs;
   float * cost;
   bool * sol;
   checkCuda( cudaMallocManaged(&w, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
+  checkCuda( cudaMallocManaged(&coeffs, NUM_OBJECTIVES*NUM_COEFFICIENTS*sizeof(float)) );
   checkCuda( cudaMallocManaged(&cost, NUM_OBJECTIVES*sizeof(float)) );
   checkCuda( cudaMallocManaged(&sol, NUM_OBJECTIVES*sizeof(bool)) );
 
@@ -99,7 +114,8 @@ int main()
   auto cstart = std::chrono::high_resolution_clock::now();
   for (int cyc = 0; cyc < CYCLES; cyc++)
   {
-    solve<<<NUM_OBJECTIVES, NUM_VARIABLES>>>(w, cost, sol);
+    generate_coefficients<<<NUM_OBJECTIVES, NUM_COEFFICIENTS>>>(NUM_OBJECTIVES*NUM_COEFFICIENTS, coeffs);
+    solve<<<NUM_OBJECTIVES, NUM_VARIABLES>>>(w, coeffs, cost, sol);
     checkCuda( cudaDeviceSynchronize() );
   }
   auto cend = std::chrono::high_resolution_clock::now();
@@ -108,18 +124,27 @@ int main()
   printf("Cycles: %lu, Time: %lu us\n", CYCLES, time_us);
   printf("Performance: %lu cycles/s\n", CYCLES*(1000000L)/time_us);
 
-  float solution[] = {1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0};
-
   // Print Results
-  float squared_sum_err = 0.0f;
   for (int i = 0; i < NUM_OBJECTIVES*NUM_VARIABLES; i++)
   {
-    squared_sum_err += (w[i] - solution[i])*(w[i] - solution[i]);
     printf("W(%d) = %f ", i, w[i]);
     printf("%s ", sol[i/NUM_VARIABLES] ? "(solved)" : "(unsolved)");
     printf("cost = %f\n", cost[i/NUM_VARIABLES]);
   }
-  printf("Error: %f\n", squared_sum_err);
+
+  // Get Error
+  const int NUM_STATES = 2;
+  float solution[NUM_STATES] = {1.0, 0.0};
+  float squared_sum_err = 0.0f;
+  for (int p = 0; p < NUM_OBJECTIVES; p++)
+  {
+    int wIdx = p*NUM_VARIABLES;
+    for (int s = 0; s < NUM_STATES; s++)
+    {
+      squared_sum_err += sqrt((w[wIdx+s] - solution[s])*(w[wIdx+s] - solution[s]));
+    }
+  }
+  printf("Error: %f\n", squared_sum_err/NUM_OBJECTIVES);
 
   // Free
   checkCuda( cudaFree(w) );

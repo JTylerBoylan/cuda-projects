@@ -3,7 +3,7 @@
 
 using namespace GiNaC;
 
-std::string generate_lookup_header(const int num_obj, const int num_vars)
+std::string generate_lookup_header(const int num_obj, const int num_vars, const int num_coeffs)
 {
     std::ostringstream oss;
     oss 
@@ -12,19 +12,20 @@ std::string generate_lookup_header(const int num_obj, const int num_vars)
     << "\n"
     << "#define NUM_OBJECTIVES " << num_obj << "\n"
     << "#define NUM_VARIABLES " << num_vars << "\n"
+    << "#define NUM_COEFFICIENTS " << num_coeffs << "\n"
     << "\n"
-    << "typedef float (*intercept_ptr)(float*);\n"
+    << "typedef float (*intercept_ptr)(float*, float*);\n"
     << "\n"
     ;
     return oss.str();
 }
 
-std::string generate_cost_function(const ex expression)
+std::string generate_cost_function(const ex expression, const int np)
 {
     std::ostringstream oss;
     oss
     << "__device__\n"
-    << "float COST(float * w)\n"
+    << "float COST_" << np << "(float * w, float * c)\n"
     << "{\n"
     << "return " << csrc_float << expression << ";\n"
     << "}\n"
@@ -48,7 +49,7 @@ std::string generate_expression_function(const ex expression, const int np, cons
     std::ostringstream oss;
     oss
     << "__device__\n"
-    << "float j_" << np << "_" << nv << "(float * w)\n"
+    << "float j_" << np << "_" << nv << "(float * w, float * c)\n"
     << "{\n"
     << "return " << csrc_float << expression << ";\n"
     << "}\n"
@@ -92,6 +93,25 @@ std::string generate_lookup_initials(const int num_prob, const int num_vars)
         {
             oss << "WI_" << p << "_" << v << ", ";
         }
+        oss << "\n";
+    }
+    oss
+    << "};\n"
+    << "\n"
+    ;
+    return oss.str();
+}
+
+std::string generate_lookup_objective(const int num_prob)
+{
+    std::ostringstream oss;
+    oss
+    << "__constant__\n"
+    << "intercept_ptr LOOKUP_OBJECTIVE[" << num_prob << "] =\n"
+    << "{\n";
+    for (int p = 0; p < num_prob; p++)
+    {
+        oss << "COST_" << p << ", ";
         oss << "\n";
     }
     oss
