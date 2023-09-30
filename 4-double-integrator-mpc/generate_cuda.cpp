@@ -15,13 +15,13 @@
 #define NUM_OBJECTIVES 100
 
 // MPC Params
-#define NUM_NODES 2
+#define NUM_NODES 1
 #define HORIZON_TIME 1.0F
 #define DELTA_TIME HORIZON_TIME/NUM_NODES
 
 // Solver Params
-#define NUM_STATES 3*NUM_NODES
-#define NUM_CONSTRAINTS 4*NUM_NODES
+#define NUM_STATES 3*(NUM_NODES + 1)
+#define NUM_CONSTRAINTS 4*(NUM_NODES + 1)
 #define NUM_COEFFICIENTS 0
 
 #define NUM_VARIABLES NUM_STATES+2*NUM_CONSTRAINTS
@@ -49,34 +49,47 @@ matrix inequality_constraints(std::vector<symbol_ptr>& x, std::vector<symbol_ptr
 {
   (void) coeffs; // unused
   (void) index; // unused
+
   matrix inequality(NUM_CONSTRAINTS, 1);
-  for (int i = 0; i < NUM_NODES; i++)
+
+  // Initial state based on random gaussian float
+  const float mu = 0.0; // mean
+  const float sigma = 5.0; // st dev
+
+  auto const seed = std::random_device{}();
+  auto urbg = std::mt19937{seed};
+  auto norm = std::normal_distribution<float>{mu, sigma};
+
+  const float startX = norm(urbg);
+  const float startV = norm(urbg);
+
+  // Boundary constraints
+  inequality(0,0) = (*x[0]) - startX;
+  inequality(1,0) =  startX - (*x[0]);
+  inequality(2,0) = (*x[NUM_NODES]) - startV;
+  inequality(3,0) = startV - (*x[NUM_NODES]);
+
+  // Dynamic constraints
+  for (int i = 1; i < NUM_NODES; i++)
   {
     const int xi = i;
-    const int vi = 1*NUM_NODES + i;
+    const int vi = NUM_NODES + i;
     const int ui = 2*NUM_NODES + i;
     const int ci = 4*i;
-    inequality(ci, 0) = (*x[xi+1]) - (*x[xi]) - (*x[vi])*DELTA_TIME;
-    inequality(ci+1, 0) = -(*x[xi+1]) + (*x[xi]) + (*x[vi])*DELTA_TIME;
-    inequality(ci+2, 0) = (*x[vi+1]) - (*x[vi]) - (*x[ui])*DELTA_TIME;
-    inequality(ci+3, 0) = -(*x[vi+1]) + (*x[vi]) + (*x[ui])*DELTA_TIME;
+    inequality(ci, 0) = (*x[xi]) - (*x[xi-1]) - (*x[vi-1])*DELTA_TIME;
+    inequality(ci+1, 0) = -(*x[xi]) + (*x[xi-1]) + (*x[vi-1])*DELTA_TIME;
+    inequality(ci+2, 0) = (*x[vi]) - (*x[vi-1]) - (*x[ui-1])*DELTA_TIME;
+    inequality(ci+3, 0) = -(*x[vi]) + (*x[vi-1]) + (*x[ui-1])*DELTA_TIME;
   }
   return inequality;
 }
 
 std::vector<float> initial_variables(const int index)
 {
-  const float mu = 0.0;
-  const float sigma = 5.0;
-
-  auto const seed = std::random_device{}();
-  auto urbg = std::mt19937{seed};
-  auto norm = std::normal_distribution<float>{mu, sigma};
-
   std::vector<float> inits(NUM_VARIABLES);
   for (int i = 0; i < NUM_VARIABLES; i++)
   {
-    inits[i] = norm(urbg);
+    inits[i] = 1.0F;
   }
   return inits;
 }
@@ -92,6 +105,8 @@ matrix calculate_inv_J_KKT(std::vector<symbol_ptr> w, const ex& objective, const
 
 int main()
 {
+
+  srand(time(NULL));
 
   std::ofstream cu;
   cu.open("/app/GENERATED_LOOKUP.cu");
