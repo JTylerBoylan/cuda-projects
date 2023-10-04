@@ -5,6 +5,8 @@
 #include <math.h>
 #include <chrono>
 #include <assert.h>
+#include <cusolverDn.h>
+#include <cublas_v2.h>
 
 #include "GENERATED_LOOKUP.cu"
 
@@ -13,147 +15,83 @@
 
 inline cudaError_t checkCuda(cudaError_t result);
 
-__device__
-float squared_sum(float * w)
-{
-  float sum = 0;
-  for (int v = 0; v < NUM_VARIABLES; v++)
-  {
-    sum += w[v]*w[v];
-  }
-  return sum;
-}
-
-__global__
-void solve(float * w, float * coeffs, float * cost, bool * sol)
-{
-  assert(NUM_VARIABLES == blockDim.x);
-
-  // Variables local to the block
-  __shared__ float wi[NUM_VARIABLES];
-  __shared__ float diffi[NUM_VARIABLES];
-  __shared__ bool solved;
-
-  // Indices
-  const int varIdx = threadIdx.x;
-  const int objIdx = blockIdx.x;
-  const int globalIdx = objIdx*NUM_VARIABLES + varIdx;
-
-  // Initialize
-  if (varIdx == 0)
-  {
-    solved = false;
-  }
-  __syncthreads();
-
-  // Get from global lookup function
-  wi[varIdx] = LOOKUP_INITIAL[globalIdx];
-
-  // Run Newton-Raphson
-  for (int iter = 0; iter < NUM_ITERATIONS; iter++)
-  {
-
-    // Break if solved
-    if (solved) break;
-
-    // Evaluate from global lookup function
-    diffi[varIdx] = LOOKUP_INTERCEPT[globalIdx](wi, &coeffs[objIdx]);
-
-    // Apply
-    wi[varIdx] -= diffi[varIdx];
-
-    // Check if solved
-    if (varIdx == 0 && squared_sum(diffi) < TOLERANCE)
-    {
-      solved = true;
-    }
-
-    // Make sure the entire block is done before iterating
-    __syncthreads();
-  }
-
-  // Save results
-  w[globalIdx] = wi[varIdx];
-  if (varIdx == 0)
-  {
-    cost[objIdx] = LOOKUP_OBJECTIVE[objIdx](wi, &coeffs[objIdx]);
-    sol[objIdx] = solved;
-  }
-
-}
-
-__global__
-void generate_coefficients(const int size, float * coeffs)
-{
-  const int index = blockDim.x*blockIdx.x + threadIdx.x;
-
-  const float maxVal = 0.5F;
-  const float minVal = 0.25F;
-
-  float coeffVal = minVal + (float(index)/float(size))*(maxVal - minVal);
-
-  coeffs[index] = index % 2 == 0 ? coeffVal : 1 - coeffVal;
-}
-
-#define CYCLES 10000L
+#define CYCLES 1L
 
 int main()
 {
 
-  // Allocate
-  float * w;
-  float * coeffs;
-  float * cost;
-  bool * sol;
-  checkCuda( cudaMallocManaged(&w, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
-  checkCuda( cudaMallocManaged(&coeffs, NUM_OBJECTIVES*NUM_COEFFICIENTS*sizeof(float)) );
-  checkCuda( cudaMallocManaged(&cost, NUM_OBJECTIVES*sizeof(float)) );
-  checkCuda( cudaMallocManaged(&sol, NUM_OBJECTIVES*sizeof(bool)) );
+    float * w = 0;
+    checkCuda( cudaMalloc(&w, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
 
-  // Solve
-  auto cstart = std::chrono::high_resolution_clock::now();
-  for (int cyc = 0; cyc < CYCLES; cyc++)
-  {
-    generate_coefficients<<<NUM_OBJECTIVES, NUM_COEFFICIENTS>>>(NUM_OBJECTIVES*NUM_COEFFICIENTS, coeffs);
-    checkCuda( cudaDeviceSynchronize() );
-    solve<<<NUM_OBJECTIVES, NUM_VARIABLES>>>(w, coeffs, cost, sol);
-    checkCuda( cudaDeviceSynchronize() );
-  }
-  auto cend = std::chrono::high_resolution_clock::now();
+    float * coeffs = 0;
+    checkCuda( cudaMalloc(&coeffs, NUM_OBJECTIVES*NUM_COEFFICIENTS*sizeof(float)) );
 
-  time_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(cend - cstart).count();
-  printf("Cycles: %lu, Time: %lu us\n", CYCLES, time_us);
-  printf("Performance: %lu cycles/s\n", CYCLES*(1000000L)/time_us);
+    float ** KKT = 0;
+    float * d_KKT = 0;
+    checkCuda( cudaMalloc(&KKT, NUM_OBJECTIVES*sizeof(float*)) );
+    checkCuda( cudaMalloc(&d_KKT, NUM_OBJECTIVES*NUM_VARIABLES*sizeof(float)) );
 
-  // Print Results
-  for (int i = 0; i < NUM_OBJECTIVES*NUM_VARIABLES; i++)
-  {
-    printf("W(%d) = %f ", i, w[i]);
-    printf("%s ", sol[i/NUM_VARIABLES] ? "(solved)" : "(unsolved)");
-    printf("cost = %f\n", cost[i/NUM_VARIABLES]);
-  }
+    float ** J = 0;
+    float * d_J = 0;
+    checkCuda( cudaMalloc(&J, NUM_OBJECTIVES*sizeof(float*)) );
+    checkCuda( cudaMalloc(&d_J, NUM_OBJECTIVES*NUM_VARIABLES*NUM_VARIABLES*sizeof(float)) );
 
-  // Get Error
-  const int NUM_STATES = 2;
-  float solution[NUM_STATES] = {1.0, 0.0};
-  float squared_sum_err = 0.0f;
-  for (int p = 0; p < NUM_OBJECTIVES; p++)
-  {
-    int wIdx = p*NUM_VARIABLES;
-    for (int s = 0; s < NUM_STATES; s++)
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+
+    int *d_infoArray;  // Info array
+    int *d_PivotArray;  // Pivot array for LU factorization
+    checkCuda( cudaMalloc((void**)&d_infoArray, NUM_OBJECTIVES * sizeof(int)) );
+    checkCuda( cudaMalloc((void**)&d_PivotArray, NUM_VARIABLES * NUM_OBJECTIVES * sizeof(int)) );
+
+    // Solve
+    auto cstart = std::chrono::high_resolution_clock::now();
+    for (int cyc = 0; cyc < CYCLES; cyc++)
     {
-      squared_sum_err += sqrt((w[wIdx+s] - solution[s])*(w[wIdx+s] - solution[s]));
+
+        GET_WI(w);
+
+        // GET_COEFFS(coeffs);
+
+        for (int iter = 0; iter < NUM_ITERATIONS; iter++)
+        {
+          GET_KKT(d_KKT, w, coeffs);
+          FORMAT_KKT(KKT, d_KKT);
+
+          GET_J(d_J, w, coeffs);
+          FORMAT_J(J, d_J);
+
+          checkCuda( cudaDeviceSynchronize() );
+
+          // LU Factorization
+          cublasSgetrfBatched(handle, NUM_VARIABLES, J, NUM_VARIABLES, d_PivotArray, d_infoArray, NUM_OBJECTIVES);
+
+          // Solve
+          cublasSgetrsBatched(handle, CUBLAS_OP_N, NUM_VARIABLES, NUM_OBJECTIVES, (const float**) J, NUM_VARIABLES,
+            d_PivotArray, KKT, NUM_VARIABLES, d_infoArray, NUM_OBJECTIVES);
+
+
+          
+        }
+
     }
-  }
-  printf("Error: %f\n", squared_sum_err/NUM_OBJECTIVES);
+    auto cend = std::chrono::high_resolution_clock::now();
 
-  // Free
-  checkCuda( cudaFree(w) );
-  checkCuda( cudaFree(cost) );
-  checkCuda( cudaFree(sol) );
+    time_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(cend - cstart).count();
+    printf("Cycles: %lu, Time: %lu us\n", CYCLES, time_us);
+    printf("Performance: %lu cycles/s\n", CYCLES*(1000000L)/time_us);
 
-  return 0;
+    cublasDestroy(handle);
+    checkCuda( cudaFree(w) );
+    checkCuda( cudaFree(coeffs) );
+    checkCuda( cudaFree(d_KKT) );
+    checkCuda( cudaFree(KKT) );
+    checkCuda( cudaFree(d_J) );
+    checkCuda( cudaFree(J) );
+
+    return EXIT_SUCCESS;
 }
+
 
 inline cudaError_t checkCuda(cudaError_t result)
 {

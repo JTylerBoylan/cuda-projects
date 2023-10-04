@@ -12,7 +12,7 @@
 
 #include "generate_util.cpp"
 
-#define NUM_OBJECTIVES 100
+#define NUM_OBJECTIVES 3
 
 // MPC Params
 #define NUM_NODES 1
@@ -101,7 +101,8 @@ std::vector<float> initial_variables(const int index)
 */
 
 void create_index_vector(std::vector<symbol_ptr>& vec, const int size, const std::string var);
-matrix calculate_inv_J_KKT(std::vector<symbol_ptr> w, const ex& objective, const matrix& inequality);
+matrix diff_function_by_vec(const ex& func, const std::vector<symbol_ptr>& vec);
+matrix diff_vec_by_vec(const matrix& ex_vec, const std::vector<symbol_ptr>& sym_vec);
 
 int main()
 {
@@ -112,13 +113,19 @@ int main()
   cu.open("/app/GENERATED_LOOKUP.cu");
   cu.clear();
 
-  cu << generate_lookup_header(NUM_OBJECTIVES, NUM_VARIABLES, NUM_COEFFICIENTS);
+  cu << generate_HEADER(NUM_OBJECTIVES, NUM_VARIABLES, NUM_COEFFICIENTS);
 
-  for (int obj = 0; obj < NUM_OBJECTIVES; obj++)
+  for (int np = 0; np < NUM_OBJECTIVES; np++)
   {
     // Get initial values
-    const std::vector<float> w0 = initial_variables(obj);
+    const std::vector<float> w0 = initial_variables(np);
     printf("Retrieved initial variables.\n");
+
+    // Generate in file
+    for (int nv = 0; nv < NUM_VARIABLES; nv++)
+    {
+      cu << generate_WI_P_N(w0[nv], np, nv);
+    }
 
     // Create expression vectors
     std::vector<symbol_ptr> w;
@@ -127,30 +134,65 @@ int main()
     create_index_vector(coeffs, NUM_COEFFICIENTS, "c");
 
     // Get ineq. constraint vector
-    const matrix inequality = inequality_constraints(w, coeffs, obj);
+    const matrix inequality = inequality_constraints(w, coeffs, np);
     printf("Retrieved constraint matrix.\n");
 
     assert(inequality.rows() == NUM_CONSTRAINTS);
 
     // Objective function
-    ex objective = objective_function(w, coeffs, obj);
+    ex objective = objective_function(w, coeffs, np);
     printf("Retrieved objective function.\n");
 
-    matrix invjkkt = calculate_inv_J_KKT(w, objective, inequality);
+    // Generate in file
+    cu << generate_COST_P(objective, np);
 
-    cu << generate_cost_function(objective, obj);
-
-    for (int v = 0; v < NUM_VARIABLES; v++)
+    // Lagrange equation
+    ex lagrange_equation = objective;
+    for (int l = 0; l < NUM_CONSTRAINTS; l++)
     {
-      cu << generate_winitial_definition(w0[v], obj, v);
-      cu << generate_expression_function(invjkkt(v,0), obj, v);
+      const symbol_ptr lambda = w[NUM_STATES+l];
+      const symbol_ptr s = w[NUM_STATES+NUM_CONSTRAINTS+l];
+      lagrange_equation += (*lambda)*(inequality(l,0) + (*s)*(*s));
     }
+    printf("Calculated lagrangian equation.\n");
+
+    // Get the jacobian of the objective w.r.t the symbols
+    const matrix KKT = diff_function_by_vec(lagrange_equation, w);
+    printf("Calculated KKT conditions.\n");
+
+    assert(KKT.rows() == NUM_VARIABLES);
+
+    // Generate in file
+    for (int nv = 0; nv < NUM_VARIABLES; nv++)
+    {
+      cu << generate_KKT_P_N(KKT(nv,0), np, nv);
+    }
+
+    // Get the jacobian of the objective w.r.t the symbols
+    const matrix J = diff_vec_by_vec(KKT, w);
+    printf("Calculated jacobian.\n");
+
+    // Generate in file
+    for (int row = 0; row < NUM_VARIABLES; row++)
+    {
+      for (int col = 0; col < NUM_VARIABLES; col++)
+      {
+        cu << generate_J_P_N_M(J(row,col), np, row, col);
+      }
+    }
+
   }
 
-  cu << generate_lookup_intercept(NUM_OBJECTIVES, NUM_VARIABLES);
-  cu << generate_lookup_initials(NUM_OBJECTIVES, NUM_VARIABLES);
-  cu << generate_lookup_objective(NUM_OBJECTIVES);
-  cu << generate_lookup_ender();
+  cu << generate_WI_LOOKUP(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_WI_EVALUATE();
+  cu << generate_COST_LOOKUP(NUM_OBJECTIVES);
+  cu << generate_KKT_LOOKUP(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_KKT_EVALUATE();
+  cu << generate_KKT_FORMAT();
+  cu << generate_J_LOOKUP(NUM_OBJECTIVES, NUM_VARIABLES);
+  cu << generate_J_EVALUATE();
+  cu << generate_J_FORMAT();
+  cu << generate_ENDER();
   printf("Generated GENERATED_LOOKUP.cu file.\n");
 
   printf("Done.\n");
@@ -172,41 +214,6 @@ void create_index_vector(std::vector<symbol_ptr>& vec, const int size, const std
     symbol_ptr xi = std::make_shared<symbol>(var_i);
     vec.push_back(xi);
   }
-}
-
-matrix diff_function_by_vec(const ex& func, const std::vector<symbol_ptr>& vec);
-matrix diff_vec_by_vec(const matrix& ex_vec, const std::vector<symbol_ptr>& sym_vec);
-
-// Generate inv(J)*KKT given the objective and constraints
-matrix calculate_inv_J_KKT(std::vector<symbol_ptr> w, const ex& objective, const matrix& inequality)
-{
-  // Lagrange equation
-  ex lagrange_equation = objective;
-  for (int l = 0; l < NUM_CONSTRAINTS; l++)
-  {
-    const symbol_ptr lambda = w[NUM_STATES+l];
-    const symbol_ptr s = w[NUM_STATES+NUM_CONSTRAINTS+l];
-    lagrange_equation += (*lambda)*(inequality(l,0) + (*s)*(*s));
-  }
-  printf("Calculated lagrangian equation.\n");
-
-  // Get the jacobian of the objective w.r.t the symbols
-  const matrix KKT = diff_function_by_vec(lagrange_equation, w);
-  printf("Calculated KKT conditions.\n");
-
-  // Get the jacobian of the objective w.r.t the symbols
-  const matrix J = diff_vec_by_vec(KKT, w);
-  printf("Calculated jacobian.\n");
-
-  // Get the inverse of the jacobian
-  const matrix inv_J = inverse(J);
-  printf("Calculated inverse jacobian.\n");
-
-  // Get the inverse jacobian * KKT
-  matrix inv_J_KKT = inv_J.mul(KKT);
-  printf("Calculated inverse jacobian by KKT conditions.\n");
-
-  return inv_J_KKT;
 }
 
 // Get the derivative of a function with respect to a vector
