@@ -63,14 +63,18 @@ int main()
 
           checkCuda( cudaDeviceSynchronize() );
 
+          printf("got KKT and J\n");
+
           // LU Factorization
           cublasSgetrfBatched(handle, NUM_VARIABLES, J, NUM_VARIABLES, d_PivotArray, d_infoArray, NUM_OBJECTIVES);
 
+          printf("got LU\n");
+
           // Solve
-          cublasSgetrsBatched(handle, CUBLAS_OP_N, NUM_VARIABLES, NUM_OBJECTIVES, (const float**) J, NUM_VARIABLES,
+          cublasSgetrsBatched(handle, CUBLAS_OP_N, NUM_VARIABLES, NUM_VARIABLES, (const float**) J, NUM_VARIABLES,
             d_PivotArray, KKT, NUM_VARIABLES, d_infoArray, NUM_OBJECTIVES);
 
-
+          printf("got dW\n");
           
         }
 

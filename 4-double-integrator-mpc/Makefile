@@ -11,16 +11,18 @@ INCLUDE_PATH = -I/usr/local/include
 LIBRARY_PATH = -L/usr/local/lib
 
 # Libraries to link against
-LIBRARIES = -lginac -lcln
+NVCC_LIBRARIES = -lcublas -lcusolver -lcudart -lcurand
+CXX_LIBRARIES = -lginac -lcln
+
 
 # Targets
 all: generator solver
 
 generator: generator.o
-	$(CXX) $(CXX_FLAGS) $(LIBRARY_PATH) -o generator generator.o $(LIBRARIES)
+	$(CXX) $(CXX_FLAGS) $(LIBRARY_PATH) -o generator generator.o $(CXX_LIBRARIES)
 
 solver: solver.o
-	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o solver solver.o $(LIBRARIES)
+	$(NVCC) $(NVCC_FLAGS) $(LIBRARY_PATH) -o solver solver.o $(NVCC_LIBRARIES)
 
 generator.o: generate_cuda.cpp generate_util.cpp
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c generate_cuda.cpp -o generator.o

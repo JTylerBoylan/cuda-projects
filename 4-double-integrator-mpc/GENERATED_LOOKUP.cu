@@ -40,7 +40,7 @@ typedef float (*VAL_PTR)(float*, float*);
 __device__
 float COST_0(float * w, float * c)
 {
-return  (w[3]*w[3])+(w[0]*w[0])+(w[5]*w[5])+(w[2]*w[2])+(w[4]*w[4])+(w[1]*w[1]);
+return  (w[2]*w[2])+(w[5]*w[5])+(w[0]*w[0])+(w[4]*w[4])+(w[1]*w[1])+(w[3]*w[3]);
 }
 
 __device__
@@ -52,7 +52,7 @@ return  w[6]+2.0*w[0]-w[7];
 __device__
 float KKT_0_1(float * w, float * c)
 {
-return  2.0*w[1]+w[8]-w[9];
+return -w[9]+2.0*w[1]+w[8];
 }
 
 __device__
@@ -82,25 +82,25 @@ return 2.0*w[5];
 __device__
 float KKT_0_6(float * w, float * c)
 {
-return  (w[14]*w[14])+w[0]+1.3026464e+00;
+return  w[0]+(w[14]*w[14])+9.6200390e+00;
 }
 
 __device__
 float KKT_0_7(float * w, float * c)
 {
-return -w[0]+(w[15]*w[15])-1.3026464e+00;
+return -w[0]+(w[15]*w[15])-9.6200390e+00;
 }
 
 __device__
 float KKT_0_8(float * w, float * c)
 {
-return  (w[16]*w[16])+w[1]-3.4960594e+00;
+return  (w[16]*w[16])+w[1]-8.3237314e+00;
 }
 
 __device__
 float KKT_0_9(float * w, float * c)
 {
-return  (w[17]*w[17])-w[1]+3.4960594e+00;
+return  (w[17]*w[17])-w[1]+8.3237314e+00;
 }
 
 __device__
@@ -136,7 +136,7 @@ return 2.0*w[6]*w[14];
 __device__
 float KKT_0_15(float * w, float * c)
 {
-return 2.0*w[7]*w[15];
+return 2.0*w[15]*w[7];
 }
 
 __device__
@@ -148,7 +148,7 @@ return 2.0*w[16]*w[8];
 __device__
 float KKT_0_17(float * w, float * c)
 {
-return 2.0*w[17]*w[9];
+return 2.0*w[9]*w[17];
 }
 
 __device__
@@ -3105,13 +3105,13 @@ return 2.0*w[13];
 __device__
 float COST_1(float * w, float * c)
 {
-return  (w[3]*w[3])+(w[0]*w[0])+(w[5]*w[5])+(w[2]*w[2])+(w[4]*w[4])+(w[1]*w[1]);
+return  (w[2]*w[2])+(w[1]*w[1])+(w[4]*w[4])+(w[3]*w[3])+(w[5]*w[5])+(w[0]*w[0]);
 }
 
 __device__
 float KKT_1_0(float * w, float * c)
 {
-return  2.0*w[0]-w[7]+w[6];
+return  w[6]+2.0*w[0]-w[7];
 }
 
 __device__
@@ -3147,25 +3147,25 @@ return 2.0*w[5];
 __device__
 float KKT_1_6(float * w, float * c)
 {
-return  w[0]+(w[14]*w[14])+4.6149583e+00;
+return  w[0]+(w[14]*w[14])+3.1061583e+00;
 }
 
 __device__
 float KKT_1_7(float * w, float * c)
 {
-return -w[0]+(w[15]*w[15])-4.6149583e+00;
+return -w[0]+(w[15]*w[15])-3.1061583e+00;
 }
 
 __device__
 float KKT_1_8(float * w, float * c)
 {
-return  w[1]+(w[16]*w[16])-3.0790415e+00;
+return  (w[16]*w[16])+w[1]+3.5191097e+00;
 }
 
 __device__
 float KKT_1_9(float * w, float * c)
 {
-return -w[1]+(w[17]*w[17])+3.0790415e+00;
+return  (w[17]*w[17])-w[1]-3.5191097e+00;
 }
 
 __device__
@@ -3195,7 +3195,7 @@ return (w[21]*w[21]);
 __device__
 float KKT_1_14(float * w, float * c)
 {
-return 2.0*w[14]*w[6];
+return 2.0*w[6]*w[14];
 }
 
 __device__
@@ -3237,7 +3237,7 @@ return 2.0*w[20]*w[12];
 __device__
 float KKT_1_21(float * w, float * c)
 {
-return 2.0*w[21]*w[13];
+return 2.0*w[13]*w[21];
 }
 
 __device__
@@ -6170,7 +6170,7 @@ return 2.0*w[13];
 __device__
 float COST_2(float * w, float * c)
 {
-return  (w[2]*w[2])+(w[4]*w[4])+(w[1]*w[1])+(w[3]*w[3])+(w[0]*w[0])+(w[5]*w[5]);
+return  (w[0]*w[0])+(w[3]*w[3])+(w[2]*w[2])+(w[5]*w[5])+(w[4]*w[4])+(w[1]*w[1]);
 }
 
 __device__
@@ -6212,25 +6212,25 @@ return 2.0*w[5];
 __device__
 float KKT_2_6(float * w, float * c)
 {
-return  (w[14]*w[14])+w[0]-5.4025226e+00;
+return  (w[14]*w[14])+w[0]+2.2708039e+00;
 }
 
 __device__
 float KKT_2_7(float * w, float * c)
 {
-return  (w[15]*w[15])-w[0]+5.4025226e+00;
+return  (w[15]*w[15])-w[0]-2.2708039e+00;
 }
 
 __device__
 float KKT_2_8(float * w, float * c)
 {
-return  w[1]+(w[16]*w[16])+3.5670600e+00;
+return  w[1]+(w[16]*w[16])-3.4868014e+00;
 }
 
 __device__
 float KKT_2_9(float * w, float * c)
 {
-return -w[1]+(w[17]*w[17])-3.5670600e+00;
+return -w[1]+(w[17]*w[17])+3.4868014e+00;
 }
 
 __device__
@@ -6284,7 +6284,7 @@ return 2.0*w[17]*w[9];
 __device__
 float KKT_2_18(float * w, float * c)
 {
-return 2.0*w[18]*w[10];
+return 2.0*w[10]*w[18];
 }
 
 __device__
