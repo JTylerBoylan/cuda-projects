@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-PROJECT_NAME="my-project"
+PROJECT_NAME="5-osqp"
 
 docker build -t ${PROJECT_NAME} "${SCRIPT_DIR}"
 
