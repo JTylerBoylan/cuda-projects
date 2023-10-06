@@ -6,6 +6,8 @@ RUN apt-get install -y cmake git
 
 RUN apt-get install -y libeigen3-dev
 
+RUN apt-get install -y libginac-dev libcln-dev
+
 RUN git clone https://github.com/osqp/osqp
 RUN cd osqp && mkdir build
 RUN cd osqp/build && cmake -G "Unix Makefiles" .. -DOSQP_ALGEBRA_BACKEND=cuda
