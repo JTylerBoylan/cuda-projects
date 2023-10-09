@@ -1,0 +1,1 @@
+/usr/bin/c++ -O2 -g -DNDEBUG CMakeFiles/main.dir/src/main.cpp.o -o main  -Wl,-rpath,/usr/local/lib -lstdc++ -lstdc++fs -lm -lginac -lcln /usr/local/lib/libOsqpEigen.so.0.8.1 /usr/local/lib/libosqp.so -lcublas -lcusparse 
