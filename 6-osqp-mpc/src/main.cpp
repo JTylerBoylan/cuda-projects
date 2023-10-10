@@ -7,7 +7,7 @@
 
 #include "osqp/osqp.h"
 
-#define NUMBER_OF_NODES 10
+#define NUMBER_OF_NODES 11
 #define HORIZON_TIME 1.0F
 
 using namespace boylan;
@@ -22,8 +22,9 @@ int main()
     int Nu = 1;
 
     EigenMatrix Q(Nx, Nx), R(Nu, Nu);
-    Q << 1.0, 0.0, 1.0, 0.0;
-    R << 1.0;
+    Q << 1.0, 0.0,
+         0.0, 0.0;
+    R << 0.0;
     EigenVector xf(Nx);
     xf << 0.0, 0.0;
     MPCObjective::Ptr objective = std::make_shared<MPCObjective>(N, Nx, Nu, Q, R, xf);
@@ -34,21 +35,24 @@ int main()
     MPCDynamics::Ptr dynamics = std::make_shared<MPCDynamics>(N, Nx, Nu, A, B);
 
     EigenVector x0(Nx);
-    x0 << 1.0, 1.0;
+    x0 << 1.0, 0.0;
     EigenVector x_min(Nx), x_max(Nx), u_min(Nu), u_max(Nu);
     x_min << -10.0, -10.0;
     x_max << +10.0, +10.0;
-    u_min << -2.0;
-    u_max << +2.0;
+    u_min << -5.0;
+    u_max << +5.0;
     MPCConstraints::Ptr constraints = std::make_shared<MPCConstraints>(N, Nx, Nu, x0, x_min, x_max, u_min, u_max);
 
     int n = Nx * (N + 1) + Nu * N;
     int m = 2 * Nx * (N + 1) + Nu * N;
 
     MPCSolver::Ptr solver = std::make_shared<MPCSolver>(n, m, objective, dynamics, constraints);
+    solver->getSettings()->max_iter = 100000;
     solver->getSettings()->warm_starting = true;
     solver->getSettings()->verbose = true;
+    solver->getSettings()->polishing = false;
 
+    solver->setup();
     OSQPInt exitflag = solver->solve();
 
     OSQPSolution *solution = solver->getSolution();
@@ -59,6 +63,10 @@ int main()
         {
             const int idx = 2 * i;
             std::cout << "x[" << i << "] = " << solution->x[idx] << std::endl;
+        }
+        for (OSQPInt i = 0; i < N; ++i)
+        {
+            const int idx = 2 * i + 1;
             std::cout << "v[" << i << "] = " << solution->x[idx + 1] << std::endl;
         }
         for (OSQPInt i = 0; i < N - 1; ++i)

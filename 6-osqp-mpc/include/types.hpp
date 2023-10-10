@@ -10,10 +10,6 @@
 namespace boylan
 {
 
-using OSQPSolverPtr = std::shared_ptr<OSQPSolver>;
-using OSQPSettingsPtr = std::shared_ptr<OSQPSettings>;
-using OSQPCscMatrixPtr = std::shared_ptr<OSQPCscMatrix>;
-
 #ifdef OSQP_USE_FLOAT
     using EigenVector = Eigen::VectorXf;
     using EigenMatrix = Eigen::MatrixXf;

@@ -19,11 +19,11 @@ namespace boylan
         MPCSolver(const OSQPInt n, const OSQPInt m, MPCObjective::Ptr objective, MPCDynamics::Ptr dynamics, MPCConstraints::Ptr constraints)
             : n_(n), m_(m), objective_(objective), dynamics_(dynamics), constraints_(constraints)
         {
-            setupSettings();
-            setupSolver();
+            settings_ = new OSQPSettings();
+            osqp_set_default_settings(settings_);
         }
 
-        OSQPSettingsPtr getSettings()
+        OSQPSettings *getSettings()
         {
             return settings_;
         }
@@ -31,6 +31,16 @@ namespace boylan
         OSQPSolver *getSolver()
         {
             return solver_;
+        }
+
+        OSQPInt setup()
+        {
+            P_ = toCSC(objective_->getHessian());
+            float *q = objective_->getGradient().data();
+            A_ = toCSC(dynamics_->getLinearConstraintMatrix());
+            float *l = constraints_->getLowerBounds().data();
+            float *u = constraints_->getUpperBounds().data();
+            return osqp_setup(&solver_, P_, q, A_, l, u, m_, n_, settings_);
         }
 
         OSQPInt solve()
@@ -47,7 +57,10 @@ namespace boylan
         {
             osqp_cleanup(solver_);
             freeCSC(P_);
+            delete P_;
             freeCSC(A_);
+            delete A_;
+            delete settings_;
         }
 
     private:
@@ -57,27 +70,11 @@ namespace boylan
         const MPCConstraints::Ptr constraints_;
 
         OSQPSolver *solver_;
-        OSQPSettingsPtr settings_;
+        OSQPSettings *settings_;
 
-        OSQPCscMatrixPtr P_, A_;
+        OSQPCscMatrix *P_, *A_;
 
-        void setupSettings()
-        {
-            settings_ = std::make_shared<OSQPSettings>();
-            osqp_set_default_settings(settings_.get());
-        }
-
-        void setupSolver()
-        {
-            P_ = toCSC(objective_->getHessian());
-            float *q = objective_->getGradient().data();
-            A_ = toCSC(dynamics_->getLinearConstraintMatrix());
-            float *l = constraints_->getLowerBounds().data();
-            float *u = constraints_->getUpperBounds().data();
-            osqp_setup(&solver_, P_.get(), q, A_.get(), l, u, m_, n_, settings_.get());
-        }
-
-        OSQPCscMatrixPtr toCSC(const Eigen::SparseMatrix<OSQPFloat> &eigen_matrix)
+        OSQPCscMatrix *toCSC(const Eigen::SparseMatrix<OSQPFloat> &eigen_matrix)
         {
             OSQPInt A_nnz = eigen_matrix.nonZeros();
             OSQPFloat *A_x = new OSQPFloat[A_nnz];
@@ -96,12 +93,12 @@ namespace boylan
                 }
                 A_p[j + 1] = k;
             }
-            OSQPCscMatrixPtr osqp_matrix = std::make_shared<OSQPCscMatrix>();
-            csc_set_data(osqp_matrix.get(), eigen_matrix.rows(), eigen_matrix.cols(), A_nnz, A_x, A_i, A_p);
+            OSQPCscMatrix *osqp_matrix = new OSQPCscMatrix();
+            csc_set_data(osqp_matrix, eigen_matrix.rows(), eigen_matrix.cols(), A_nnz, A_x, A_i, A_p);
             return osqp_matrix;
         }
 
-        void freeCSC(OSQPCscMatrixPtr osqp_matrix)
+        void freeCSC(OSQPCscMatrix *osqp_matrix)
         {
             delete osqp_matrix->x;
             delete osqp_matrix->i;
