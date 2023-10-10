@@ -2,9 +2,9 @@
 #define ONR_OSQP_MPC_OBJECTIVE_HPP_
 
 #include <assert.h>
-#include <Eigen/Sparse>
 
 #include "types.hpp"
+#include "Eigen/Sparse"
 
 namespace boylan
 {
@@ -14,7 +14,9 @@ namespace boylan
     class MPCObjective
     {
     public:
-        MPCObjective(const int N, const int nx, const int nu, const MATRIX &Q, const MATRIX &R, const MATRIX xf)
+        using Ptr = std::shared_ptr<MPCObjective>;
+
+        MPCObjective(const int N, const int nx, const int nu, const EigenMatrix &Q, const EigenMatrix &R, const EigenMatrix xf)
             : N_(N), nx_(nx), nu_(nu), Q_(Q), R_(R), xf_(xf)
         {
             assert(("MPC Objective Q matrix must be size Nx by Nx.", Q_.rows() == nx_ && Q_.cols() == nx_));
@@ -24,12 +26,12 @@ namespace boylan
             this->calculateHessian();
         }
 
-        VECTOR &getGradient()
+        EigenVector &getGradient()
         {
             return gradient_;
         }
 
-        SparseMatrix<FLOAT> &getHessian()
+        SparseMatrix<OSQPFloat> &getHessian()
         {
             return hessian_;
         }
@@ -37,19 +39,19 @@ namespace boylan
     private:
         const int N_;
         const int nx_, nu_;
-        const MATRIX Q_, R_;
-        const VECTOR xf_;
+        const EigenMatrix Q_, R_;
+        const EigenVector xf_;
 
-        VECTOR gradient_;
-        SparseMatrix<FLOAT> hessian_;
+        EigenVector gradient_;
+        SparseMatrix<OSQPFloat, ColMajor> hessian_;
 
         void calculateGradient()
         {
-            MATRIX Qx_ref(nx_, 1);
+            EigenMatrix Qx_ref(nx_, 1);
             Qx_ref = Q_ * (-xf_);
 
             // populate the gradient vector
-            gradient_ = VECTOR::Zero(nx_ * (N_ + 1) + nu_ * N_, 1);
+            gradient_ = EigenVector::Zero(nx_ * (N_ + 1) + nu_ * N_, 1);
             for (int i = 0; i < nx_ * (N_ + 1); i++)
             {
                 int posQ = i % nx_;

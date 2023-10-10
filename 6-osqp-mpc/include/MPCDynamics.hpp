@@ -2,9 +2,9 @@
 #define ONR_OSQP_MPC_DYNAMICS_HPP_
 
 #include <assert.h>
-#include <Eigen/Sparse>
 
 #include "types.hpp"
+#include "Eigen/Sparse"
 
 namespace boylan
 {
@@ -13,7 +13,9 @@ namespace boylan
     class MPCDynamics
     {
     public:
-        MPCDynamics(const int N, const int nx, const int nu, const MATRIX &A, const MATRIX &B)
+        using Ptr = std::shared_ptr<MPCDynamics>;
+
+        MPCDynamics(const int N, const int nx, const int nu, const EigenMatrix &A, const EigenMatrix &B)
             : N_(N), nx_(nx), nu_(nu), A_(A), B_(B)
         {
             assert(("MPC Dynamics A matrix must be size Nx by Nx.", A_.rows() == nx_ && A_.cols() == nx_));
@@ -21,7 +23,7 @@ namespace boylan
             this->calculateLinearConstraintMatrix();
         }
 
-        SparseMatrix<FLOAT> &getLinearConstraintMatrix()
+        SparseMatrix<OSQPFloat> &getLinearConstraintMatrix()
         {
             return Ac_;
         }
@@ -29,9 +31,9 @@ namespace boylan
     private:
         const int N_;
         const int nx_, nu_;
-        const MATRIX A_, B_;
+        const EigenMatrix A_, B_;
 
-        SparseMatrix<FLOAT> Ac_;
+        SparseMatrix<OSQPFloat, ColMajor> Ac_;
 
         void calculateLinearConstraintMatrix()
         {

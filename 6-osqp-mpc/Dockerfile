@@ -11,8 +11,3 @@ RUN cd osqp && mkdir build
 RUN cd osqp/build && cmake -G "Unix Makefiles" .. -DOSQP_ALGEBRA_BACKEND=cuda
 # RUN cd osqp/build && cmake -G "Unix Makefiles" ..
 RUN cd osqp/build && cmake --build . --target install
-
-RUN git clone https://github.com/robotology/osqp-eigen
-RUN cd osqp-eigen && mkdir build
-RUN cd osqp-eigen/build && cmake ..
-RUN cd osqp-eigen/build && make && make install
