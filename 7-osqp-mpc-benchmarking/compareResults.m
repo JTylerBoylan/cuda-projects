@@ -39,3 +39,24 @@ plot(N2, GPU_times2, '-g');
 title("OSQP MPC 2")
 xlabel("# of problems")
 ylabel("Comp. Time (s)")
+
+%%
+
+CPU_dat3 = readmatrix("results_CPU3.csv");
+GPU_dat3 = readmatrix("results_GPU3.csv");
+
+N3 = CPU_dat3(:,1);
+CPU_times3 = CPU_dat3(:,2);
+GPU_times3 = GPU_dat3(:,2);
+
+figure('Color', [1 1 1])
+hold on
+grid on
+plot(N, CPU_times, '-b');
+plot(N, GPU_times, '-g');
+plot(N3, CPU_times3, '--b');
+plot(N3, GPU_times3, '--g');
+title("OSQP MPC 3")
+xlabel("# of problems")
+ylabel("Comp. Time (s)")
+legend(["CPU" "GPU" "CPU w/ MT" "GPU w/ MT"], "Location","northwest")
