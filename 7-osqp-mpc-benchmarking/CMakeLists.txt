@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(onr_osqp)
 
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Release)
 
 find_package(osqp REQUIRED)
 find_package(Eigen3)

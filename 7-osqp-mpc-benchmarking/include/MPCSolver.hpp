@@ -41,10 +41,11 @@ namespace boylan
         OSQPInt setup()
         {
             P_ = toCSC(objective_->getHessian());
-            float *q = objective_->getGradient().data();
+            OSQPFloat *q = objective_->getGradient().data();
+            dynamics_->getLinearConstraintMatrix().makeCompressed();
             A_ = toCSC(dynamics_->getLinearConstraintMatrix());
-            float *l = constraints_->getLowerBounds().data();
-            float *u = constraints_->getUpperBounds().data();
+            OSQPFloat *l = constraints_->getLowerBounds().data();
+            OSQPFloat *u = constraints_->getUpperBounds().data();
             return osqp_setup(&solver_, P_, q, A_, l, u, m_, n_, settings_);
         }
 
@@ -53,9 +54,9 @@ namespace boylan
             return osqp_solve(solver_);
         }
 
-        void updateX0(const EigenVector& x0)
+        void updateX0(const int n_problem, const EigenVector& x0)
         {
-            constraints_->updateX0(x0);
+            constraints_->updateX0(n_problem, x0);
             osqp_update_data_vec(solver_, nullptr, constraints_->getLowerBounds().data(), constraints_->getUpperBounds().data());
         }
 
