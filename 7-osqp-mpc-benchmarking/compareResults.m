@@ -13,8 +13,8 @@ GPU_times = GPU_dat(:,2);
 figure('Color', [1 1 1])
 hold on
 grid on
-plot(N, CPU_times, '-b');
-plot(N, GPU_times, '-g');
+plot(N, CPU_times, '-b', 'LineWidth', 1.5);
+plot(N, GPU_times, '-g', 'LineWidth', 1.5);
 title("OSQP MPC")
 xlabel("# of problems")
 ylabel("Comp. Time (s)")
@@ -32,13 +32,12 @@ GPU_times2 = GPU_dat2(:,2);
 figure('Color', [1 1 1])
 hold on
 grid on
-plot(N, CPU_times, '-b');
-plot(N, GPU_times, '-g');
-plot(N2, CPU_times2, '-b');
-plot(N2, GPU_times2, '-g');
+plot(N2, CPU_times2, '-b', 'LineWidth', 1.5);
+plot(N2, GPU_times2, '-g', 'LineWidth', 1.5);
 title("OSQP MPC 2")
 xlabel("# of problems")
 ylabel("Comp. Time (s)")
+legend(["CPU" "GPU"], "Location","northwest")
 
 %%
 
@@ -52,10 +51,10 @@ GPU_times3 = GPU_dat3(:,2);
 figure('Color', [1 1 1])
 hold on
 grid on
-plot(N, CPU_times, '-b');
-plot(N, GPU_times, '-g');
-plot(N3, CPU_times3, '--b');
-plot(N3, GPU_times3, '--g');
+plot(N, CPU_times, '-b', 'LineWidth', 1.5);
+plot(N, GPU_times, '-g', 'LineWidth', 1.5);
+plot(N3, CPU_times3, '--b', 'LineWidth', 1.5);
+plot(N3, GPU_times3, '--g', 'LineWidth', 1.5);
 title("OSQP MPC 3")
 xlabel("# of problems")
 ylabel("Comp. Time (s)")
