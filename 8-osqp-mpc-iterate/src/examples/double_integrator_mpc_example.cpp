@@ -17,8 +17,8 @@ int main()
     problem.setup();
 
     solver.setup(problem);
-    solver.solve(problem);
 
+    solver.solve(problem);
     auto solution = problem.QPtoDoubleIntegratorSolution(solver.getSolution());
 
     std::cout << "X star:\n" << solution.x_star << std::endl;

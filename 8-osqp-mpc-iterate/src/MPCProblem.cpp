@@ -35,23 +35,29 @@ namespace boylan
     void MPCProblem::calculateHessianMatrix()
     {
         hessian_triplets_.clear();
-        for (int i = 0; i < this->num_var_; i++)
+        for (int i = 0; i < this->num_nodes_ + 1; i++)
         {
-            if (i < num_states_ * (num_nodes_ + 1))
-            {
-                const int sIdx = i % num_states_;
-                const float value = this->state_dynamics_.diagonal()[sIdx];
-                if (value != 0)
-                    hessian_triplets_.push_back(EigenTriplet(i, i, value));
-            }
-            else
-            {
-                const int cIdx = i % num_controls_;
-                const float value = this->control_dynamics_.diagonal()[cIdx];
-                if (value != 0)
-                    hessian_triplets_.push_back(EigenTriplet(i, i, value));
-            }
+            const int idx = this->num_states_ * i;
+            for (int j = 0; j < this->num_states_; j++)
+                for (int k = 0; k < this->num_states_; k++)
+                {
+                    const Float value = this->state_objective_(j, k);
+                    if (value != 0)
+                        hessian_triplets_.push_back(EigenTriplet(idx + k, idx + k, value));
+                }
         }
+        for (int i = 0; i < this->num_nodes_; i++)
+        {
+            const int idx = this->num_states_ * (this->num_nodes_ + 1) + this->num_controls_ * i;
+            for (int j = 0; j < this->num_controls_; j++)
+                for (int k = 0; k < this->num_controls_; k++)
+                {
+                    const Float value = this->control_objective_(j, k);
+                    if (value != 0)
+                        hessian_triplets_.push_back(EigenTriplet(idx + k, idx + k, value));
+                }
+        }
+
         hessian_ = EigenSparseMatrix(num_var_, num_var_);
         hessian_.setFromTriplets(hessian_triplets_.begin(), hessian_triplets_.end());
     }
@@ -71,39 +77,32 @@ namespace boylan
     {
         lin_constraint_triplets_.clear();
         for (int i = 0; i < num_states_ * (num_nodes_ + 1); i++)
-        {
             lin_constraint_triplets_.push_back(EigenTriplet(i, i, -1));
-        }
 
         for (int i = 0; i < num_nodes_; i++)
             for (int j = 0; j < num_states_; j++)
                 for (int k = 0; k < num_states_; k++)
                 {
-                    const float value = state_dynamics_(j, k);
+                    const Float value = state_dynamics_(j, k);
                     if (value != 0)
-                    {
                         lin_constraint_triplets_.push_back(EigenTriplet(num_states_ * (i + 1) + j, num_states_ * i + k, value));
-                    }
                 }
 
         for (int i = 0; i < num_nodes_; i++)
             for (int j = 0; j < num_states_; j++)
                 for (int k = 0; k < num_controls_; k++)
                 {
-                    const float value = control_dynamics_(j, k);
+                    const Float value = control_dynamics_(j, k);
                     if (value != 0)
-                    {
                         lin_constraint_triplets_.push_back(EigenTriplet(
                             num_states_ * (i + 1) + j,
                             num_controls_ * i + k + num_states_ * (num_nodes_ + 1),
                             value));
-                    }
                 }
-
+                
         for (int i = 0; i < num_var_; i++)
-        {
             lin_constraint_triplets_.push_back(EigenTriplet(i + (num_nodes_ + 1) * num_states_, i, 1));
-        }
+
         lin_constraint_ = EigenSparseMatrix(num_con_, num_var_);
         lin_constraint_.setFromTriplets(lin_constraint_triplets_.begin(), lin_constraint_triplets_.end());
     }
