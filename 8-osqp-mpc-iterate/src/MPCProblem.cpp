@@ -3,12 +3,25 @@
 namespace boylan
 {
 
+    MPCSolution MPCProblem::QPtoMPCSolution(const QPSolution &qp_solution)
+    {
+        MPCSolution mpc_solution;
+        mpc_solution.x_star = EigenVector(num_states_ * (num_nodes_ + 1));
+        mpc_solution.x_star = qp_solution.x_star.block(0, 0, num_states_ * (num_nodes_ + 1), 1);
+        mpc_solution.u_star = EigenVector(num_controls_ * num_nodes_);
+        mpc_solution.u_star = qp_solution.x_star.block(num_states_ * (num_nodes_ + 1), 0, num_controls_ * num_nodes_, 1);
+        mpc_solution.run_time_s = qp_solution.run_time_s;
+        mpc_solution.setup_time_s = qp_solution.setup_time_s;
+        mpc_solution.solve_time_s = qp_solution.solve_time_s;
+        return mpc_solution;
+    }
+
     void MPCProblem::countVariables()
     {
         const size_t N = nodeCount();
         const size_t Nx = stateSize();
         const size_t Nu = controlSize();
-        this->num_var_ = (2 * Nx * (N + 1) + Nu * N);
+        this->num_var_ = (Nx * (N + 1) + Nu * N);
     }
 
     void MPCProblem::countConstraints()
@@ -16,13 +29,13 @@ namespace boylan
         const size_t N = nodeCount();
         const size_t Nx = stateSize();
         const size_t Nu = controlSize();
-        this->num_con_ = (Nx * (N + 1) + Nu * N);
+        this->num_con_ = (2 * Nx * (N + 1) + Nu * N);
     }
 
     void MPCProblem::calculateHessianMatrix()
     {
         hessian_triplets_.clear();
-        for (int i = 0; i < this->num_con_; i++)
+        for (int i = 0; i < this->num_var_; i++)
         {
             if (i < num_states_ * (num_nodes_ + 1))
             {
@@ -39,12 +52,13 @@ namespace boylan
                     hessian_triplets_.push_back(EigenTriplet(i, i, value));
             }
         }
+        hessian_ = EigenSparseMatrix(num_var_, num_var_);
         hessian_.setFromTriplets(hessian_triplets_.begin(), hessian_triplets_.end());
     }
 
     void MPCProblem::calculateGradientVector()
     {
-        gradient_.resize(num_var_, 1);
+        gradient_ = EigenVector(num_var_);
         const EigenVector grad_x = state_objective_ * (-desired_state_);
         for (int i = 0; i < num_states_ * (num_nodes_ + 1); i++)
         {
@@ -86,10 +100,11 @@ namespace boylan
                     }
                 }
 
-        for (int i = 0; i < num_con_; i++)
+        for (int i = 0; i < num_var_; i++)
         {
             lin_constraint_triplets_.push_back(EigenTriplet(i + (num_nodes_ + 1) * num_states_, i, 1));
         }
+        lin_constraint_ = EigenSparseMatrix(num_con_, num_var_);
         lin_constraint_.setFromTriplets(lin_constraint_triplets_.begin(), lin_constraint_triplets_.end());
     }
 
@@ -115,9 +130,11 @@ namespace boylan
         lower_equality.block(0, 0, num_states_, 1) = -initial_state_;
         EigenVector upper_equality = lower_equality;
 
+        lower_bound_ = EigenVector(num_con_);
         lower_bound_.block(0, 0, num_eq, 1) = lower_equality;
         lower_bound_.block(num_eq, 0, num_ineq, 1) = lower_inequality;
 
+        upper_bound_ = EigenVector(num_con_);
         upper_bound_.block(0, 0, num_eq, 1) = upper_equality;
         upper_bound_.block(num_eq, 0, num_ineq, 1) = upper_inequality;
     }

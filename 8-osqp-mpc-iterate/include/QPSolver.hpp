@@ -16,12 +16,12 @@ namespace boylan
 
         QPSolution &getSolution()
         {
-            return latest_solution_;
+            return qp_solution_;
         }
 
     protected:
 
-        QPSolution latest_solution_;
+        QPSolution qp_solution_;
     };
 }
 

@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(onr_osqp)
-
-set(CMAKE_BUILD_TYPE Release)
+project(orlqp)
 
 find_package(osqp REQUIRED)
 find_package(Eigen3)
@@ -9,7 +7,15 @@ find_package(Eigen3)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 include_directories(include)
 
+add_library(orlqp SHARED)
+target_sources(orlqp PRIVATE
+    src/MPCProblem.cpp
+    src/OSQPSolver.cpp
+    src/DoubleIntegratorMPCProblem.cpp
+)
+target_include_directories(orlqp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # Add the executable
-add_executable(main src/main.cpp)
-target_include_directories(main PUBLIC include)
-target_link_libraries(main PUBLIC stdc++ stdc++fs m osqp::osqp)
+add_executable(double_integrator_mpc_example src/examples/double_integrator_mpc_example.cpp)
+target_include_directories(double_integrator_mpc_example PUBLIC include)
+target_link_libraries(double_integrator_mpc_example PUBLIC stdc++ stdc++fs m orlqp osqp::osqp)

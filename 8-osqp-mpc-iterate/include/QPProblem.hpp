@@ -9,6 +9,9 @@ namespace boylan
     struct QPSolution
     {
         EigenVector x_star;
+        Float run_time_s;
+        Float setup_time_s;
+        Float solve_time_s;
     };
 
     class QPProblem

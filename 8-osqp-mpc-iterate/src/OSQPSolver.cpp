@@ -5,38 +5,51 @@ namespace boylan
 
     OSQP::OSQP()
     {
-        solver_ = std::make_shared<OSQPSolver *>();
-        settings_ = std::make_shared<OSQPSettings>();
-        solution_ = std::make_shared<OSQPSolution>();
+        osqp_solver_ = std::make_shared<OSQPSolver *>();
+        osqp_settings_ = std::make_shared<OSQPSettings>();
+        osqp_solution_ = std::make_shared<OSQPSolution *>();
+
+        osqp_set_default_settings(osqp_settings_.get());
     }
 
     bool OSQP::setup(QPProblem &problem)
     {
         const int n = problem.variableCount();
         const int m = problem.constraintCount();
+
+        freeCSC(hessian_csc_);
         hessian_csc_ = convertSparseMatrixToCSC(problem.getHessianMatrix());
+
         OSQPFloat *q = problem.getGradientVector().data();
+
         problem.getLinearConstraintMatrix().makeCompressed();
+        freeCSC(lin_constraint_csc_);
         lin_constraint_csc_ = convertSparseMatrixToCSC(problem.getLinearConstraintMatrix());
+
         OSQPFloat *l = problem.getLowerBoundVector().data();
         OSQPFloat *u = problem.getUpperBoundVector().data();
-        return osqp_setup(solver_.get(), hessian_csc_.get(), q, lin_constraint_csc_.get(), l, u, m, n, settings_.get());
+
+        return osqp_setup(osqp_solver_.get(), hessian_csc_.get(), q, lin_constraint_csc_.get(), l, u, m, n, osqp_settings_.get());
     }
 
     bool OSQP::solve(QPProblem &problem)
     {
-        latest_exit_ = osqp_solve(*solver_.get());
-        latest_solution_.x_star = Eigen::Map<EigenVector>(solution_->x, problem.variableCount());
+        latest_exit_ = osqp_solve(*osqp_solver_.get());
+        *osqp_solution_ = (*osqp_solver_.get())->solution;
+        if (latest_exit_ == 0) {
+            qp_solution_.x_star = Eigen::Map<EigenVector>((*osqp_solution_)->x, problem.variableCount());
+            qp_solution_.run_time_s = (*osqp_solver_.get())->info->run_time;
+            qp_solution_.setup_time_s = (*osqp_solver_.get())->info->setup_time;
+            qp_solution_.solve_time_s = (*osqp_solver_.get())->info->solve_time;
+        }
         return latest_exit_ == 0;
     }
 
     OSQP::~OSQP()
     {
-        osqp_cleanup(*solver_.get());
-        if (hessian_csc_)
-            freeCSC(hessian_csc_);
-        if (lin_constraint_csc_)
-            freeCSC(lin_constraint_csc_);
+        osqp_cleanup(*osqp_solver_.get());
+        freeCSC(hessian_csc_);
+        freeCSC(lin_constraint_csc_);
     }
 
     std::shared_ptr<OSQPCscMatrix> OSQP::convertSparseMatrixToCSC(const EigenSparseMatrix &matrix)
@@ -65,9 +78,12 @@ namespace boylan
 
     void OSQP::freeCSC(std::shared_ptr<OSQPCscMatrix> matrix)
     {
-        delete matrix->x;
-        delete matrix->i;
-        delete matrix->p;
+        if (matrix)
+        {
+            delete matrix->x;
+            delete matrix->i;
+            delete matrix->p;
+        }
     }
 
 }

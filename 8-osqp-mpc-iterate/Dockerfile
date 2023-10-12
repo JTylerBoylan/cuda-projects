@@ -1,10 +1,8 @@
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
-RUN apt-get update -y
-
-RUN apt-get install -y cmake git
-
-RUN apt-get install -y libeigen3-dev
+RUN apt-get update -y && \
+    apt-get install -y cmake git gdb && \
+    apt-get install -y libeigen3-dev
 
 RUN git clone https://github.com/osqp/osqp
 RUN cd osqp && mkdir build

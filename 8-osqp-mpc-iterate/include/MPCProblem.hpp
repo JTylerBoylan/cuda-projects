@@ -103,9 +103,12 @@ namespace boylan
             calculateGradientVector();
             calculateLinearConstraintMatrix();
             calculateBoundVectors();
+            QPProblem::setup();
         }
 
-    private:
+        MPCSolution QPtoMPCSolution(const QPSolution &qp_solution);
+
+    protected:
         size_t num_nodes_;
         size_t num_states_;
         size_t num_controls_;

@@ -25,7 +25,7 @@ namespace boylan
 
         std::shared_ptr<OSQPSettings> getSettings()
         {
-            return settings_;
+            return osqp_settings_;
         }
 
         ~OSQP();
@@ -33,9 +33,9 @@ namespace boylan
     private:
         int latest_exit_ = -1;
 
-        std::shared_ptr<OSQPSolver *> solver_;
-        std::shared_ptr<OSQPSettings> settings_;
-        std::shared_ptr<OSQPSolution> solution_;
+        std::shared_ptr<OSQPSolver *> osqp_solver_;
+        std::shared_ptr<OSQPSettings> osqp_settings_;
+        std::shared_ptr<OSQPSolution *> osqp_solution_;
 
         std::shared_ptr<OSQPCscMatrix> hessian_csc_;
         std::shared_ptr<OSQPCscMatrix> lin_constraint_csc_;
