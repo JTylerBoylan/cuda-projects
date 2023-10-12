@@ -20,7 +20,6 @@ namespace boylan
         }
 
     protected:
-
         QPSolution qp_solution_;
     };
 }

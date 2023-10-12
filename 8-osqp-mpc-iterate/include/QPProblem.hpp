@@ -29,6 +29,8 @@ namespace boylan
             ub : Upper bound
         */
 
+       using Ptr = std::shared_ptr<QPProblem>;
+
         size_t &variableCount()
         {
             return num_var_;
@@ -78,7 +80,6 @@ namespace boylan
 
         std::vector<EigenTriplet> hessian_triplets_;
         std::vector<EigenTriplet> lin_constraint_triplets_;
-
     };
 
 }
