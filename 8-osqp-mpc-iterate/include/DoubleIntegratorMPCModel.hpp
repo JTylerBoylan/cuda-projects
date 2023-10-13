@@ -37,10 +37,6 @@ namespace boylan
 
         DoubleIntegratorMPCSolution MPCtoDoubleIntegratorSolution(const MPCSolution &mpc_solution);
 
-    private:
-        Float time_horizon_;
-        Float mass_;
-
         void countNodes();
         void countStates();
         void countControls();
@@ -52,6 +48,10 @@ namespace boylan
         void calculateControlDynamics();
         void calculateStateBounds();
         void calculateControlBounds();
+
+    private:
+        Float time_horizon_;
+        Float mass_;
     };
 }
 

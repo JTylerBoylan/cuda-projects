@@ -104,6 +104,13 @@ namespace boylan
             QPModel::setup();
         }
 
+        void countVariables();
+        void countConstraints();
+        void calculateHessianMatrix();
+        void calculateGradientVector();
+        void calculateLinearConstraintMatrix();
+        void calculateBoundVectors();
+
     protected:
         size_t num_nodes_;
         size_t num_states_;
@@ -119,13 +126,6 @@ namespace boylan
         EigenVector state_upper_bound_;
         EigenVector control_lower_bound_;
         EigenVector control_upper_bound_;
-
-        void countVariables();
-        void countConstraints();
-        void calculateHessianMatrix();
-        void calculateGradientVector();
-        void calculateLinearConstraintMatrix();
-        void calculateBoundVectors();
     };
 
 }

@@ -19,6 +19,8 @@ namespace boylan
         QPProblem()
             : model_(std::make_shared<ModelType>()), solver_(std::make_shared<SolverType>())
         {
+            model_->setup();
+            solver_->setup(*model_);
         }
 
         const std::shared_ptr<ModelType> getModel()
@@ -46,8 +48,6 @@ namespace boylan
 
         void solveQP()
         {
-            model_->setup();
-            solver_->setup(*model_);
             if (solver_->solve(*model_))
                 qp_solution_ = std::make_shared<QPSolution>(solver_->getSolution());
         }
