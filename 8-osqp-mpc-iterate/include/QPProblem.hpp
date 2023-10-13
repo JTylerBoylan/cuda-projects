@@ -2,84 +2,55 @@
 #define ORLQP_QP_PROBLEM_HPP_
 
 #include "QPTypes.hpp"
+#include "QPModel.hpp"
+#include "QPSolver.hpp"
+#include "OSQPSolver.hpp"
 
 namespace boylan
 {
 
-    struct QPSolution
-    {
-        EigenVector x_star;
-        Float run_time_s;
-        Float setup_time_s;
-        Float solve_time_s;
-    };
-
+    template <typename ModelType, typename SolverType = OSQP>
     class QPProblem
     {
+        static_assert(std::is_base_of<QPModel, ModelType>::value, "ModelType must derive from QPModel.");
+        static_assert(std::is_base_of<QPSolver, SolverType>::value, "SolverType must derive from QPSolver.");
+
     public:
-        /*
-            QP Problem:
-            minimize 0.5 * x' * Q * x + c' * x
-            subject to lb <= Ac * x <= ub
-
-            Q : Hessian
-            c : Gradient
-            Ac : Linear constraint matrix
-            lb : Lower bound
-            ub : Upper bound
-        */
-
-       using Ptr = std::shared_ptr<QPProblem>;
-
-        size_t &variableCount()
+        QPProblem()
+            : model_(std::make_shared<ModelType>()), solver_(std::make_shared<SolverType>())
         {
-            return num_var_;
         }
 
-        size_t &constraintCount()
+        const std::shared_ptr<ModelType> getModel()
         {
-            return num_con_;
+            return model_;
         }
 
-        EigenSparseMatrix &getHessianMatrix()
+        const std::shared_ptr<SolverType> getSolver()
         {
-            return hessian_;
+            return solver_;
         }
 
-        EigenVector &getGradientVector()
+        QPSolution &getSolution()
         {
-            return gradient_;
+            if (!qp_solution_)
+                solveQP();
+            return *qp_solution_;
         }
-
-        EigenSparseMatrix &getLinearConstraintMatrix()
-        {
-            return lin_constraint_;
-        }
-
-        EigenVector &getLowerBoundVector()
-        {
-            return lower_bound_;
-        }
-
-        EigenVector &getUpperBoundVector()
-        {
-            return upper_bound_;
-        }
-
-        virtual void setup() {}
 
     protected:
-        size_t num_var_;
-        size_t num_con_;
+        const std::shared_ptr<ModelType> model_;
+        const std::shared_ptr<SolverType> solver_;
 
-        EigenSparseMatrix hessian_;
-        EigenVector gradient_;
-        EigenSparseMatrix lin_constraint_;
-        EigenVector lower_bound_;
-        EigenVector upper_bound_;
+        std::shared_ptr<QPSolution> qp_solution_;
 
-        std::vector<EigenTriplet> hessian_triplets_;
-        std::vector<EigenTriplet> lin_constraint_triplets_;
+        void solveQP()
+        {
+            model_->setup();
+            solver_->setup(*model_);
+            if (solver_->solve(*model_))
+                qp_solution_ = std::make_shared<QPSolution>(solver_->getSolution());
+        }
     };
 
 }

@@ -1,4 +1,4 @@
-#include "DoubleIntegratorMPCProblem.hpp"
+#include "DoubleIntegratorMPCModel.hpp"
 
 #define DI_MPC_NUMBER_OF_NODES 11
 
@@ -25,7 +25,7 @@
 namespace boylan
 {
 
-    DoubleIntegratorMPCSolution DoubleIntegratorMPCProblem::MPCtoDoubleIntegratorSolution(const MPCSolution &mpc_solution)
+    DoubleIntegratorMPCSolution DoubleIntegratorMPCModel::MPCtoDoubleIntegratorSolution(const MPCSolution &mpc_solution)
     {
         DoubleIntegratorMPCSolution dimpc_solution;
         dimpc_solution.x_star = EigenVector(num_nodes_ + 1);
@@ -42,65 +42,60 @@ namespace boylan
         return dimpc_solution;
     }
 
-    DoubleIntegratorMPCSolution DoubleIntegratorMPCProblem::QPtoDoubleIntegratorSolution(const QPSolution &qp_solution)
-    {
-        return this->MPCtoDoubleIntegratorSolution(this->QPtoMPCSolution(qp_solution));
-    }
-
-    void DoubleIntegratorMPCProblem::countNodes()
+    void DoubleIntegratorMPCModel::countNodes()
     {
         this->num_nodes_ = DI_MPC_NUMBER_OF_NODES;
     }
 
-    void DoubleIntegratorMPCProblem::countStates()
+    void DoubleIntegratorMPCModel::countStates()
     {
         this->num_states_ = DI_MPC_NUMBER_OF_STATES;
     }
 
-    void DoubleIntegratorMPCProblem::countControls()
+    void DoubleIntegratorMPCModel::countControls()
     {
         this->num_controls_ = DI_MPC_NUMBER_OF_CONTROLS;
     }
 
-    void DoubleIntegratorMPCProblem::calculateInitialState()
+    void DoubleIntegratorMPCModel::calculateInitialState()
     {
         this->initial_state_ = EigenVector(DI_MPC_NUMBER_OF_STATES);
         this->initial_state_ << DI_MPC_INITIAL_POSITION, DI_MPC_INITIAL_VELOCITY;
     }
 
-    void DoubleIntegratorMPCProblem::calculateDesiredState()
+    void DoubleIntegratorMPCModel::calculateDesiredState()
     {
         this->desired_state_ = EigenVector(DI_MPC_NUMBER_OF_STATES);
         this->desired_state_ << DI_MPC_DESIRED_POSITION, DI_MPC_DESIRED_VELOCITY;
     }
 
-    void DoubleIntegratorMPCProblem::calculateStateObjective()
+    void DoubleIntegratorMPCModel::calculateStateObjective()
     {
         this->state_objective_ = EigenMatrix(DI_MPC_NUMBER_OF_STATES, DI_MPC_NUMBER_OF_STATES);
         this->state_objective_ << DI_MPC_POSITION_ERROR_COST_WEIGHT, 0.0, 0.0, DI_MPC_VELOCITY_ERROR_COST_WEIGHT;
     }
 
-    void DoubleIntegratorMPCProblem::calculateControlObjective()
+    void DoubleIntegratorMPCModel::calculateControlObjective()
     {
         this->control_objective_ = EigenMatrix(DI_MPC_NUMBER_OF_CONTROLS, DI_MPC_NUMBER_OF_CONTROLS);
         this->control_objective_ << DI_MPC_FORCE_COST_WEIGHT;
     }
 
-    void DoubleIntegratorMPCProblem::calculateStateDynamics()
+    void DoubleIntegratorMPCModel::calculateStateDynamics()
     {
         const Float delta_time = time_horizon_ / this->num_nodes_;
         this->state_dynamics_ = EigenMatrix(DI_MPC_NUMBER_OF_STATES, DI_MPC_NUMBER_OF_STATES);
         this->state_dynamics_ << 1.0, delta_time, 0.0, 1.0;
     }
 
-    void DoubleIntegratorMPCProblem::calculateControlDynamics()
+    void DoubleIntegratorMPCModel::calculateControlDynamics()
     {
         const Float delta_time = time_horizon_ / this->num_nodes_;
         this->control_dynamics_ = EigenMatrix(DI_MPC_NUMBER_OF_STATES, DI_MPC_NUMBER_OF_CONTROLS);
         this->control_dynamics_ << 0.0, delta_time / mass_;
     }
 
-    void DoubleIntegratorMPCProblem::calculateStateBounds()
+    void DoubleIntegratorMPCModel::calculateStateBounds()
     {
         this->state_lower_bound_ = EigenVector(DI_MPC_NUMBER_OF_STATES);
         this->state_upper_bound_ = EigenVector(DI_MPC_NUMBER_OF_STATES);
@@ -108,7 +103,7 @@ namespace boylan
         this->state_upper_bound_ << DI_MPC_MAX_POSITION, DI_MPC_MAX_VELOCITY;
     }
 
-    void DoubleIntegratorMPCProblem::calculateControlBounds()
+    void DoubleIntegratorMPCModel::calculateControlBounds()
     {
         this->control_lower_bound_ = EigenVector(DI_MPC_NUMBER_OF_CONTROLS);
         this->control_upper_bound_ = EigenVector(DI_MPC_NUMBER_OF_CONTROLS);

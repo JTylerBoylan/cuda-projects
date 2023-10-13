@@ -14,9 +14,14 @@ namespace boylan
     public:
         OSQP();
 
-        bool setup(QPProblem &problem) override;
+        bool solve(QPModel &model) override;
+        bool setup(QPModel &model) override;
 
-        bool solve(QPProblem &problem) override;
+        void updateHessian(EigenSparseMatrix &hessian);
+        void updateGradient(EigenVector &gradient);
+        void updateLinearConstraint(EigenSparseMatrix &lin_constraint);
+        void updateLowerBound(EigenVector &lower_bound);
+        void updateUpperBound(EigenVector &upper_bound);
 
         int getLatestExit()
         {

@@ -1,5 +1,6 @@
-#include "DoubleIntegratorMPCProblem.hpp"
+#include "DoubleIntegratorMPCModel.hpp"
 #include "OSQPSolver.hpp"
+#include "MPCProblem.hpp"
 
 #include <iostream>
 
@@ -8,18 +9,10 @@ using namespace boylan;
 int main()
 {
 
-    OSQP solver;
-    solver.getSettings()->polishing = true;
-    solver.getSettings()->warm_starting = true;
-    solver.getSettings()->verbose = true;
+    MPCProblem<DoubleIntegratorMPCModel, OSQP> problem;
 
-    DoubleIntegratorMPCProblem problem;
-    problem.setup();
-
-    solver.setup(problem);
-
-    solver.solve(problem);
-    auto solution = problem.QPtoDoubleIntegratorSolution(solver.getSolution());
+    MPCSolution &mpc_solution = problem.getSolution();
+    DoubleIntegratorMPCSolution solution = problem.getModel()->MPCtoDoubleIntegratorSolution(mpc_solution);
 
     std::cout << "X star:\n" << solution.x_star << std::endl;
     std::cout << "V star:\n" << solution.v_star << std::endl;

@@ -5,44 +5,70 @@ namespace boylan
 
     OSQP::OSQP()
     {
-        osqp_solver_ = std::make_shared<OSQPSolver *>();
+        osqp_solver_ = std::make_shared<OSQPSolver *>(nullptr);
         osqp_settings_ = std::make_shared<OSQPSettings>();
-        osqp_solution_ = std::make_shared<OSQPSolution *>();
+        osqp_solution_ = std::make_shared<OSQPSolution *>(nullptr);
 
         osqp_set_default_settings(osqp_settings_.get());
     }
 
-    bool OSQP::setup(QPProblem &problem)
+    bool OSQP::setup(QPModel &model)
     {
-        const int n = problem.variableCount();
-        const int m = problem.constraintCount();
+        const int n = model.getVariableCount();
+        const int m = model.getConstraintCount();
 
         freeCSC(hessian_csc_);
-        hessian_csc_ = convertSparseMatrixToCSC(problem.getHessianMatrix());
+        hessian_csc_ = convertSparseMatrixToCSC(model.getHessianMatrix());
 
-        OSQPFloat *q = problem.getGradientVector().data();
+        OSQPFloat *q = model.getGradientVector().data();
 
-        problem.getLinearConstraintMatrix().makeCompressed();
+        model.getLinearConstraintMatrix().makeCompressed();
         freeCSC(lin_constraint_csc_);
-        lin_constraint_csc_ = convertSparseMatrixToCSC(problem.getLinearConstraintMatrix());
+        lin_constraint_csc_ = convertSparseMatrixToCSC(model.getLinearConstraintMatrix());
 
-        OSQPFloat *l = problem.getLowerBoundVector().data();
-        OSQPFloat *u = problem.getUpperBoundVector().data();
+        OSQPFloat *l = model.getLowerBoundVector().data();
+        OSQPFloat *u = model.getUpperBoundVector().data();
 
         return osqp_setup(osqp_solver_.get(), hessian_csc_.get(), q, lin_constraint_csc_.get(), l, u, m, n, osqp_settings_.get());
     }
 
-    bool OSQP::solve(QPProblem &problem)
+    bool OSQP::solve(QPModel &model)
     {
         latest_exit_ = osqp_solve(*osqp_solver_.get());
-        *osqp_solution_ = (*osqp_solver_.get())->solution;
-        if (latest_exit_ == 0) {
-            qp_solution_.x_star = Eigen::Map<EigenVector>((*osqp_solution_)->x, problem.variableCount());
+        if (latest_exit_ == 0)
+        {
+            *osqp_solution_ = (*osqp_solver_.get())->solution;
+            qp_solution_.x_star = Eigen::Map<EigenVector>((*osqp_solution_)->x, model.getVariableCount());
             qp_solution_.run_time_s = (*osqp_solver_.get())->info->run_time;
             qp_solution_.setup_time_s = (*osqp_solver_.get())->info->setup_time;
             qp_solution_.solve_time_s = (*osqp_solver_.get())->info->solve_time;
         }
         return latest_exit_ == 0;
+    }
+
+    void OSQP::updateHessian(EigenSparseMatrix &hessian)
+    {
+        /* TODO */
+    }
+
+    void OSQP::updateGradient(EigenVector &gradient)
+    {
+        osqp_update_data_vec(*osqp_solver_.get(), gradient.data(), nullptr, nullptr);
+    }
+
+    void OSQP::updateLinearConstraint(EigenSparseMatrix &lin_constraint)
+    {
+        /* TODO */
+    }
+
+    void OSQP::updateLowerBound(EigenVector &lower_bound)
+    {
+        osqp_update_data_vec(*osqp_solver_.get(), nullptr, lower_bound.data(), nullptr);
+    }
+
+    void OSQP::updateUpperBound(EigenVector &upper_bound)
+    {
+        osqp_update_data_vec(*osqp_solver_.get(), nullptr, nullptr, upper_bound.data());
     }
 
     OSQP::~OSQP()

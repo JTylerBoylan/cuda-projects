@@ -3,133 +3,60 @@
 
 #include "QPTypes.hpp"
 #include "QPProblem.hpp"
+#include "MPCModel.hpp"
 
 namespace boylan
 {
 
-    struct MPCSolution : public QPSolution
+    template <typename ModelType, typename SolverType = OSQP>
+    class MPCProblem : public QPProblem<ModelType, SolverType>
     {
-        EigenVector u_star;
-    };
+        static_assert(std::is_base_of<MPCModel, ModelType>::value, "ModelType must derive from MPCModel.");
 
-    class MPCProblem : public QPProblem
-    {
     public:
-        /*
-            MPC Problem:
-            minimize x'*Q*x + u'*R*u
-            subject to x(k+1) = A*x(k) + B*u(k)
-                       x_min <= x <= x_max
-                       u_min <= u <= u_max
-
-            Q : State objective
-            R : Control objective
-            A : State dynamics
-            B : Control dynamics
-        */
-
-        size_t &nodeCount()
+        MPCProblem()
+            : QPProblem<ModelType, SolverType>()
         {
-            return num_nodes_;
         }
 
-        size_t &stateSize()
+        void updateInitialState(const EigenVector &x0)
         {
-            return num_states_;
+            updated_ = true;
+            size_t size = this->model_->getNodeSize() * this->model_->getStateSize();
+            this->model_->getLowerBoundVector().block(0, 0, size, 1) = -x0;
+            this->model_->getUpperBoundVector().block(0, 0, size, 1) = -x0;
+            this->solver_->updateLowerBound(this->model_->getLowerBoundVector());
+            this->solver_->updateUpperBound(this->model_->getUpperBoundVector());
         }
 
-        size_t &controlSize()
+        MPCSolution &getSolution()
         {
-            return num_controls_;
+            if (!mpc_solution_ || updated_)
+                this->solveMPC();
+            return *mpc_solution_;
         }
 
-        EigenVector &getInitialState()
+    private:
+    
+        bool updated_ = true;
+        std::shared_ptr<MPCSolution> mpc_solution_;
+
+        void solveMPC()
         {
-            return initial_state_;
+            this->solveQP();
+            size_t N = this->model_->getNodeCount();
+            size_t nx = this->model_->getStateSize();
+            size_t nu = this->model_->getControlSize();
+            mpc_solution_ = std::make_shared<MPCSolution>();
+            mpc_solution_->x_star = EigenVector(nx * (N + 1));
+            mpc_solution_->x_star = this->qp_solution_->x_star.block(0, 0, nx * (N + 1), 1);
+            mpc_solution_->u_star = EigenVector(nu * N);
+            mpc_solution_->u_star = this->qp_solution_->x_star.block(nx * (N + 1), 0, nu * N, 1);
+            mpc_solution_->run_time_s = this->qp_solution_->run_time_s;
+            mpc_solution_->setup_time_s = this->qp_solution_->setup_time_s;
+            mpc_solution_->solve_time_s = this->qp_solution_->solve_time_s;
+            updated_ = false;
         }
-
-        EigenVector &getDesiredState()
-        {
-            return desired_state_;
-        }
-
-        EigenMatrix &getStateObjective()
-        {
-            return state_objective_;
-        }
-
-        EigenMatrix &getControlObjective()
-        {
-            return control_objective_;
-        }
-
-        EigenMatrix &getStateDynamics()
-        {
-            return state_dynamics_;
-        }
-
-        EigenMatrix &getControlDynamics()
-        {
-            return control_dynamics_;
-        }
-
-        EigenVector &getStateLowerBound()
-        {
-            return state_lower_bound_;
-        }
-
-        EigenVector &getStateUpperBound()
-        {
-            return state_upper_bound_;
-        }
-
-        EigenVector &getControlLowerBound()
-        {
-            return control_lower_bound_;
-        }
-
-        EigenVector &getControlUpperBound()
-        {
-            return control_upper_bound_;
-        }
-
-        // updateInitialState(const EigenVector &x0) {}
-
-        void setup() override
-        {
-            countVariables();
-            countConstraints();
-            calculateHessianMatrix();
-            calculateGradientVector();
-            calculateLinearConstraintMatrix();
-            calculateBoundVectors();
-            QPProblem::setup();
-        }
-
-        MPCSolution QPtoMPCSolution(const QPSolution &qp_solution);
-
-    protected:
-        size_t num_nodes_;
-        size_t num_states_;
-        size_t num_controls_;
-
-        EigenVector initial_state_;
-        EigenVector desired_state_;
-        EigenMatrix state_objective_;
-        EigenMatrix control_objective_;
-        EigenMatrix state_dynamics_;
-        EigenMatrix control_dynamics_;
-        EigenVector state_lower_bound_;
-        EigenVector state_upper_bound_;
-        EigenVector control_lower_bound_;
-        EigenVector control_upper_bound_;
-
-        void countVariables();
-        void countConstraints();
-        void calculateHessianMatrix();
-        void calculateGradientVector();
-        void calculateLinearConstraintMatrix();
-        void calculateBoundVectors();
     };
 
 }

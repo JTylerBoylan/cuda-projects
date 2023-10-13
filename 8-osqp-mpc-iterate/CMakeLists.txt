@@ -9,9 +9,9 @@ include_directories(include)
 
 add_library(orlqp SHARED)
 target_sources(orlqp PRIVATE
-    src/MPCProblem.cpp
-    src/OSQPSolver.cpp
-    src/DoubleIntegratorMPCProblem.cpp
+    src/mpc.cpp
+    src/osqp.cpp
+    src/double_integrator_mpc.cpp
 )
 target_include_directories(orlqp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
