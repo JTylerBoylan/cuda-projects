@@ -1,4 +1,4 @@
-#include "DoubleIntegratorMPCModel.hpp"
+#include "double_integrator_mpc/DoubleIntegratorMPCModel.hpp"
 
 #define DI_MPC_NUMBER_OF_NODES 11
 

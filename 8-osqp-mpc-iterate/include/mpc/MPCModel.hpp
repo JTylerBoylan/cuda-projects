@@ -93,15 +93,15 @@ namespace boylan
             return control_upper_bound_;
         }
 
-        void setup() override
+        void setup(const int id) override
         {
+            (void) id; // unused
             countVariables();
             countConstraints();
             calculateHessianMatrix();
             calculateGradientVector();
             calculateLinearConstraintMatrix();
             calculateBoundVectors();
-            QPModel::setup();
         }
 
         void countVariables();

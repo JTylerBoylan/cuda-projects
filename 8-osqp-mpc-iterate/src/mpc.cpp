@@ -1,5 +1,4 @@
-#include "MPCProblem.hpp"
-#include "MPCModel.hpp"
+#include "mpc/MPCModel.hpp"
 
 namespace boylan
 {

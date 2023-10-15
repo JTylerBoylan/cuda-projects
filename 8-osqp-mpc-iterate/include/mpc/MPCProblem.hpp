@@ -3,7 +3,7 @@
 
 #include "QPTypes.hpp"
 #include "QPProblem.hpp"
-#include "MPCModel.hpp"
+#include "mpc/MPCModel.hpp"
 
 namespace boylan
 {
@@ -17,6 +17,11 @@ namespace boylan
         MPCProblem()
             : QPProblem<ModelType, SolverType>()
         {
+        }
+
+        virtual void setup()
+        {
+            QPProblem<ModelType, SolverType>::setup();
         }
 
         void updateInitialState(const EigenVector &x0)
@@ -40,23 +45,31 @@ namespace boylan
 
         MPCSolution &getSolution()
         {
-            if (!mpc_solution_ || updated_)
-                this->solveMPC();
             return *mpc_solution_;
         }
 
-    private:
-    
+        virtual void solve() override
+        {
+            if (updated_)
+            {
+                QPProblem<ModelType, SolverType>::solve();
+                this->updateMPCSolution();
+                updated_ = false;
+            }
+        }
+
+    protected:
         bool updated_ = true;
         std::shared_ptr<MPCSolution> mpc_solution_;
 
-        void solveMPC()
+        void updateMPCSolution()
         {
-            this->solveQP();
             size_t N = this->model_->getNodeCount();
             size_t nx = this->model_->getStateSize();
             size_t nu = this->model_->getControlSize();
+
             mpc_solution_ = std::make_shared<MPCSolution>();
+
             mpc_solution_->x_star = EigenVector(nx * (N + 1));
             mpc_solution_->x_star = this->qp_solution_->x_star.block(0, 0, nx * (N + 1), 1);
             mpc_solution_->u_star = EigenVector(nu * N);
@@ -64,7 +77,6 @@ namespace boylan
             mpc_solution_->run_time_s = this->qp_solution_->run_time_s;
             mpc_solution_->setup_time_s = this->qp_solution_->setup_time_s;
             mpc_solution_->solve_time_s = this->qp_solution_->solve_time_s;
-            updated_ = false;
         }
     };
 

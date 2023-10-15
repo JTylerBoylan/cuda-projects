@@ -1,6 +1,6 @@
-#include "DoubleIntegratorMPCModel.hpp"
-#include "OSQPSolver.hpp"
-#include "MPCProblem.hpp"
+#include "double_integrator_mpc/DoubleIntegratorMPCModel.hpp"
+#include "osqp/OSQPSolver.hpp"
+#include "mpc/MPCProblem.hpp"
 
 #include <iostream>
 
@@ -15,8 +15,12 @@ int main()
 
     MPCProblem<DoubleIntegratorMPCModel, OSQP> problem;
 
+    problem.setup();
+
     problem.updateInitialState(initial_state);
     problem.updateDesiredState(desired_state);
+
+    problem.solve();
 
     MPCSolution &mpc_solution = problem.getSolution();
     DoubleIntegratorMPCSolution solution = problem.getModel()->MPCtoDoubleIntegratorSolution(mpc_solution);

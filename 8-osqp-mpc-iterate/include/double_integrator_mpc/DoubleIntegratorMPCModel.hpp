@@ -2,7 +2,7 @@
 #define ORLQP_DOUBLE_INTEGRATOR_MPC_MODEL_HPP_
 
 #include "QPTypes.hpp"
-#include "MPCModel.hpp"
+#include "mpc/MPCModel.hpp"
 
 namespace boylan
 {
@@ -19,7 +19,7 @@ namespace boylan
         {
         }
 
-        void setup() override
+        void setup(const int id) override
         {
             countNodes();
             countStates();
@@ -32,7 +32,7 @@ namespace boylan
             calculateControlDynamics();
             calculateStateBounds();
             calculateControlBounds();
-            MPCModel::setup();
+            MPCModel::setup(id);
         }
 
         DoubleIntegratorMPCSolution MPCtoDoubleIntegratorSolution(const MPCSolution &mpc_solution);

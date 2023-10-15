@@ -4,7 +4,7 @@
 #include "QPTypes.hpp"
 #include "QPModel.hpp"
 #include "QPSolver.hpp"
-#include "OSQPSolver.hpp"
+#include "osqp/OSQPSolver.hpp"
 
 namespace boylan
 {
@@ -19,7 +19,11 @@ namespace boylan
         QPProblem()
             : model_(std::make_shared<ModelType>()), solver_(std::make_shared<SolverType>())
         {
-            model_->setup();
+        }
+
+        virtual void setup()
+        {
+            model_->setup(0);
             solver_->setup(*model_);
         }
 
@@ -35,9 +39,13 @@ namespace boylan
 
         QPSolution &getSolution()
         {
-            if (!qp_solution_)
-                solveQP();
             return *qp_solution_;
+        }
+
+        virtual void solve()
+        {
+            if (solver_->solve(*model_))
+                qp_solution_ = std::make_shared<QPSolution>(solver_->getSolution());
         }
 
     protected:
@@ -45,12 +53,6 @@ namespace boylan
         const std::shared_ptr<SolverType> solver_;
 
         std::shared_ptr<QPSolution> qp_solution_;
-
-        void solveQP()
-        {
-            if (solver_->solve(*model_))
-                qp_solution_ = std::make_shared<QPSolution>(solver_->getSolution());
-        }
     };
 
 }

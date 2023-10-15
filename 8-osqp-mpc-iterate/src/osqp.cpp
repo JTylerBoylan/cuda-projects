@@ -1,4 +1,4 @@
-#include "OSQPSolver.hpp"
+#include "osqp/OSQPSolver.hpp"
 
 namespace boylan
 {

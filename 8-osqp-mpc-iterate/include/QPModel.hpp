@@ -66,7 +66,8 @@ namespace boylan
             return upper_bound_;
         }
 
-        virtual void setup() {}
+        // Set all protected variables
+        virtual void setup(const int id) = 0;
 
     protected:
         size_t num_variables_ = 0;
