@@ -24,23 +24,24 @@ namespace boylan
             QPProblem<ModelType, SolverType>::setup();
         }
 
-        void updateInitialState(const EigenVector &x0)
+        int updateInitialState(const EigenVector &x0)
         {
             updated_ = true;
             size_t size = this->model_->getStateSize();
             this->model_->getInitialState() = x0;
             this->model_->getLowerBoundVector().block(0, 0, size, 1) = -x0;
             this->model_->getUpperBoundVector().block(0, 0, size, 1) = -x0;
-            this->solver_->updateLowerBound(this->model_->getLowerBoundVector());
-            this->solver_->updateUpperBound(this->model_->getUpperBoundVector());
+            int exlow = this->solver_->updateLowerBound(this->model_->getLowerBoundVector());
+            int exup = this->solver_->updateUpperBound(this->model_->getUpperBoundVector());
+            return std::max(exlow, exup);
         }
 
-        void updateDesiredState(const EigenVector &xf)
+        int updateDesiredState(const EigenVector &xf)
         {
             updated_ = true;
             this->model_->getDesiredState() = xf;
             this->model_->calculateGradientVector();
-            this->solver_->updateGradient(this->model_->getGradientVector());
+            return this->solver_->updateGradient(this->model_->getGradientVector());
         }
 
         MPCSolution &getSolution()

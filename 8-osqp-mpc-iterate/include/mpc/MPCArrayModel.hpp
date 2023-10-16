@@ -113,6 +113,12 @@ namespace boylan
             return control_upper_bound_[index];
         }
 
+        EigenMatrix getSingleHessianMatrix(const int index);
+        EigenVector getSingleGradientVector(const int index);
+        EigenMatrix getSingleLinearConstraintMatrix(const int index);
+        EigenVector getSingleLowerBoundVector(const int index);
+        EigenVector getSingleUpperBoundVector(const int index);
+
         void setup(const int id) override
         {
             (void)id; // unused

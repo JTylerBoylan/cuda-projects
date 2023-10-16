@@ -46,29 +46,31 @@ namespace boylan
         return latest_exit_ == 0;
     }
 
-    void OSQP::updateHessian(EigenSparseMatrix &hessian)
+    int OSQP::updateHessian(EigenSparseMatrix &hessian)
     {
         /* TODO */
+        return -1;
     }
 
-    void OSQP::updateGradient(EigenVector &gradient)
+    int OSQP::updateGradient(EigenVector &gradient)
     {
-        osqp_update_data_vec(*osqp_solver_.get(), gradient.data(), nullptr, nullptr);
+        return osqp_update_data_vec(*osqp_solver_.get(), gradient.data(), nullptr, nullptr);
     }
 
-    void OSQP::updateLinearConstraint(EigenSparseMatrix &lin_constraint)
+    int OSQP::updateLinearConstraint(EigenSparseMatrix &lin_constraint)
     {
         /* TODO */
+        return -1;
     }
 
-    void OSQP::updateLowerBound(EigenVector &lower_bound)
+    int OSQP::updateLowerBound(EigenVector &lower_bound)
     {
-        osqp_update_data_vec(*osqp_solver_.get(), nullptr, lower_bound.data(), nullptr);
+        return osqp_update_data_vec(*osqp_solver_.get(), nullptr, lower_bound.data(), nullptr);
     }
 
-    void OSQP::updateUpperBound(EigenVector &upper_bound)
+    int OSQP::updateUpperBound(EigenVector &upper_bound)
     {
-        osqp_update_data_vec(*osqp_solver_.get(), nullptr, nullptr, upper_bound.data());
+        return osqp_update_data_vec(*osqp_solver_.get(), nullptr, nullptr, upper_bound.data());
     }
 
     OSQP::~OSQP()

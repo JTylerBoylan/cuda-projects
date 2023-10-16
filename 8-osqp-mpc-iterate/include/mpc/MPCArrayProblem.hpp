@@ -25,24 +25,25 @@ namespace boylan
             QPProblem<ModelType, SolverType>::setup();
         }
 
-        void updateInitialState(const int index, const EigenVector &x0)
+        int updateInitialState(const int index, const EigenVector &x0)
         {
-            const int start_idx = this->model_->getVariableStartIndex(index);
+            const int start_idx = this->model_->getConstraintStartIndex(index);
             updated_ = true;
             size_t size = this->model_->getStateSize(index);
             this->model_->getInitialState(index) = x0;
             this->model_->getLowerBoundVector().block(start_idx + 0, 0, size, 1) = -x0;
             this->model_->getUpperBoundVector().block(start_idx + 0, 0, size, 1) = -x0;
-            this->solver_->updateLowerBound(this->model_->getLowerBoundVector());
-            this->solver_->updateUpperBound(this->model_->getUpperBoundVector());
+            const int exlow = this->solver_->updateLowerBound(this->model_->getLowerBoundVector());
+            const int exup = this->solver_->updateUpperBound(this->model_->getUpperBoundVector());
+            return std::max(exlow, exup);
         }
 
-        void updateDesiredState(const int index, const EigenVector &xf)
+        int updateDesiredState(const int index, const EigenVector &xf)
         {
             updated_ = true;
             this->model_->getDesiredState(index) = xf;
             this->model_->calculateGradientVector();
-            this->solver_->updateGradient(this->model_->getGradientVector());
+            return this->solver_->updateGradient(this->model_->getGradientVector());
         }
 
         MPCArraySolution &getSolution()

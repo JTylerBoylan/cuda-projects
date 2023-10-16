@@ -53,10 +53,15 @@ namespace boylan
     {
         gradient_ = EigenVector(num_variables_);
         const EigenVector grad_x = state_objective_ * (-desired_state_);
-        for (int i = 0; i < num_states_ * (num_nodes_ + 1); i++)
+        const int Nnx = num_states_ * (num_nodes_ + 1);
+        for (int i = 0; i < Nnx; i++)
         {
             int gIdx = i % num_states_;
             gradient_(i, 0) = grad_x(gIdx, 0);
+        }
+        for (int j = 0; j < num_controls_ * num_nodes_; j++)
+        {
+            gradient_(Nnx + j, 0) = 0;
         }
     }
 

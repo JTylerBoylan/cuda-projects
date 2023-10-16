@@ -79,24 +79,32 @@ namespace boylan
             const size_t Nx = this->num_states_[p];
             const size_t Nu = this->num_controls_[p];
             const EigenVector grad_x = state_objective_[p] * (-desired_state_[p]);
-            for (int i = 0; i < Nx * (N + 1); i++)
+            const int NNx = Nx * (N + 1);
+            for (int i = 0; i < NNx; i++)
             {
                 int gIdx = i % Nx;
                 gradient_(start_idx + i, 0) = grad_x(gIdx, 0);
+            }
+            for (int j = 0; j < Nu * N; j++)
+            {
+                gradient_(start_idx + NNx + j, 0) = 0;
             }
         }
     }
 
     void MPCArrayModel::calculateLinearConstraintMatrix()
     {
+        lin_constraint_ = EigenSparseMatrix(num_constraints_, num_variables_);
         lin_constraint_triplets_.clear();
         for (int p = 0; p < num_problems_; p++)
         {
             size_t start_ridx = con_idx_[p];
             size_t start_cidx = var_idx_[p];
+
             const size_t N = this->num_nodes_[p];
             const size_t Nx = this->num_states_[p];
             const size_t Nu = this->num_controls_[p];
+
             for (int i = 0; i < Nx * (N + 1); i++)
                 lin_constraint_triplets_.push_back(EigenTriplet(start_ridx + i, start_cidx + i, -1));
 
@@ -106,7 +114,10 @@ namespace boylan
                     {
                         const Float value = state_dynamics_[p](j, k);
                         if (value != 0)
-                            lin_constraint_triplets_.push_back(EigenTriplet(start_ridx + Nx * (i + 1) + j, start_cidx + Nx * i + k, value));
+                            lin_constraint_triplets_.push_back(EigenTriplet(
+                                start_ridx + Nx * (i + 1) + j,
+                                start_cidx + Nx * i + k,
+                                value));
                     }
 
             for (int i = 0; i < N; i++)
@@ -117,14 +128,13 @@ namespace boylan
                         if (value != 0)
                             lin_constraint_triplets_.push_back(EigenTriplet(
                                 start_ridx + Nx * (i + 1) + j,
-                                start_cidx + Nu * i + k + Nx * (N + 1),
+                                start_cidx + Nx * (N + 1) + Nu * i + k,
                                 value));
                     }
 
             for (int i = 0; i < Nx * (N + 1) + Nu * N; i++)
-                lin_constraint_triplets_.push_back(EigenTriplet(start_ridx + i + (N + 1) * Nx, start_cidx + i, 1));
+                lin_constraint_triplets_.push_back(EigenTriplet(start_ridx + Nx * (N + 1) + i, start_cidx + i, 1));
         }
-        lin_constraint_ = EigenSparseMatrix(num_constraints_, num_variables_);
         lin_constraint_.setFromTriplets(lin_constraint_triplets_.begin(), lin_constraint_triplets_.end());
     }
 
@@ -166,6 +176,63 @@ namespace boylan
             upper_bound_.block(start_idx, 0, num_eq, 1) = upper_equality;
             upper_bound_.block(start_idx + num_eq, 0, num_ineq, 1) = upper_inequality;
         }
+    }
+
+    EigenMatrix MPCArrayModel::getSingleHessianMatrix(const int index)
+    {
+        const int N = num_nodes_[index];
+        const int Nx = num_states_[index];
+        const int Nu = num_controls_[index];
+        const int var_idx = var_idx_[index];
+        const int num_vars = Nx * (N + 1) + Nu * N;
+        auto hessian = hessian_.block(var_idx, var_idx, num_vars, num_vars);
+        return hessian;
+    }
+
+    EigenVector MPCArrayModel::getSingleGradientVector(const int index)
+    {
+        const int N = num_nodes_[index];
+        const int Nx = num_states_[index];
+        const int Nu = num_controls_[index];
+        const int var_idx = var_idx_[index];
+        const int num_vars = Nx * (N + 1) + Nu * N;
+        auto gradient = gradient_.block(var_idx, 0, num_vars, 1);
+        return gradient;
+    }
+
+    EigenMatrix MPCArrayModel::getSingleLinearConstraintMatrix(const int index)
+    {
+        const int N = num_nodes_[index];
+        const int Nx = num_states_[index];
+        const int Nu = num_controls_[index];
+        const int var_idx = var_idx_[index];
+        const int con_idx = con_idx_[index];
+        const int num_vars = Nx * (N + 1) + Nu * N;
+        const int num_cons = 2 * Nx * (N + 1) + Nu * N;
+        auto lin_constraint = lin_constraint_.block(con_idx, var_idx, num_cons, num_vars);
+        return lin_constraint;
+    }
+
+    EigenVector MPCArrayModel::getSingleLowerBoundVector(const int index)
+    {
+        const int N = num_nodes_[index];
+        const int Nx = num_states_[index];
+        const int Nu = num_controls_[index];
+        const int con_idx = con_idx_[index];
+        const int num_cons = 2 * Nx * (N + 1) + Nu * N;
+        auto lower_bound = lower_bound_.block(con_idx, 0, num_cons, 1);
+        return lower_bound;
+    }
+
+    EigenVector MPCArrayModel::getSingleUpperBoundVector(const int index)
+    {
+        const int N = num_nodes_[index];
+        const int Nx = num_states_[index];
+        const int Nu = num_controls_[index];
+        const int con_idx = con_idx_[index];
+        const int num_cons = 2 * Nx * (N + 1) + Nu * N;
+        auto upper_bound = upper_bound_.block(con_idx, 0, num_cons, 1);
+        return upper_bound;
     }
 
 }

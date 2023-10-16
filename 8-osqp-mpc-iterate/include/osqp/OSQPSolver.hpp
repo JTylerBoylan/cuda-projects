@@ -17,11 +17,12 @@ namespace boylan
         bool solve(QPModel &model) override;
         bool setup(QPModel &model) override;
 
-        void updateHessian(EigenSparseMatrix &hessian);
-        void updateGradient(EigenVector &gradient);
-        void updateLinearConstraint(EigenSparseMatrix &lin_constraint);
-        void updateLowerBound(EigenVector &lower_bound);
-        void updateUpperBound(EigenVector &upper_bound);
+        
+        int updateHessian(EigenSparseMatrix &hessian);
+        int updateGradient(EigenVector &gradient);
+        int updateLinearConstraint(EigenSparseMatrix &lin_constraint);
+        int updateLowerBound(EigenVector &lower_bound);
+        int updateUpperBound(EigenVector &upper_bound);
 
         int getLatestExit()
         {
