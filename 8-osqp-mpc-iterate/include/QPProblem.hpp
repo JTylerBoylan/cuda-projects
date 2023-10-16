@@ -49,8 +49,8 @@ namespace boylan
         }
 
     protected:
-        const std::shared_ptr<ModelType> model_;
-        const std::shared_ptr<SolverType> solver_;
+        std::shared_ptr<ModelType> model_;
+        std::shared_ptr<SolverType> solver_;
 
         std::shared_ptr<QPSolution> qp_solution_;
     };

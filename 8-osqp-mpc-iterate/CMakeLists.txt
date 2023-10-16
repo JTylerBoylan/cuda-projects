@@ -10,8 +10,10 @@ include_directories(include)
 add_library(orlqp SHARED)
 target_sources(orlqp PRIVATE
     src/mpc.cpp
+    src/mpc_array.cpp
     src/osqp.cpp
-    src/double_integrator_mpc.cpp
+    src/double_integrator_mpc/double_integrator_mpc.cpp
+    src/double_integrator_mpc/double_integrator_mpc_array.cpp
 )
 target_include_directories(orlqp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -24,3 +26,8 @@ target_link_libraries(double_integrator_mpc_example PUBLIC stdc++ stdc++fs m orl
 add_executable(multi_double_integrator_mpc_example src/examples/multi_double_integrator_mpc_example.cpp)
 target_include_directories(multi_double_integrator_mpc_example PUBLIC include)
 target_link_libraries(multi_double_integrator_mpc_example PUBLIC stdc++ stdc++fs m orlqp osqp::osqp)
+
+# Add the executable
+add_executable(double_integrator_mpc_array_example src/examples/double_integrator_mpc_array_example.cpp)
+target_include_directories(double_integrator_mpc_array_example PUBLIC include)
+target_link_libraries(double_integrator_mpc_array_example PUBLIC stdc++ stdc++fs m orlqp osqp::osqp)
