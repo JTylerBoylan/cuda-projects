@@ -66,26 +66,31 @@ namespace orlqp
         {
             to_csc(qp->hessian, osqp->P, osqp->Pnnz, osqp->Px, osqp->Pi, osqp->Pp);
             osqp_update_data_mat(osqp->solver, osqp->Px, osqp->Pi, osqp->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
+            qp->update.hessian = false;
         }
         if (qp->update.gradient)
         {
             osqp->q = qp->gradient.data();
             osqp_update_data_vec(osqp->solver, osqp->q, OSQP_NULL, OSQP_NULL);
+            qp->update.gradient = false;
         }
         if (qp->update.linear_constraint)
         {
             to_csc(qp->linear_constraint, osqp->A, osqp->Annz, osqp->Ax, osqp->Ai, osqp->Ap);
             osqp_update_data_mat(osqp->solver, osqp->Px, osqp->Pi, osqp->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
+            qp->update.linear_constraint = false;
         }
         if (qp->update.lower_bound)
         {
             osqp->l = qp->lower_bound.data();
             osqp_update_data_vec(osqp->solver, OSQP_NULL, osqp->l, OSQP_NULL);
+            qp->update.lower_bound = false;
         }
         if (qp->update.upper_bound)
         {
             osqp->u = qp->upper_bound.data();
             osqp_update_data_vec(osqp->solver, OSQP_NULL, OSQP_NULL, osqp->u);
+            qp->update.upper_bound = false;
         }
     }
 
@@ -97,6 +102,14 @@ namespace orlqp
         qp_solution->setup_time_s = osqp->solver->info->setup_time;
         qp_solution->solve_time_s = osqp->solver->info->solve_time;
         return qp_solution;
+    }
+
+    template <auto ExecutionPolicy = std::execution::par>
+    void solve_multi_osqp(std::vector<OSQP::Ptr> osqps)
+    {
+        std::for_each(ExecutionPolicy, osqps.begin(), osqps.end(), [&](OSQP::Ptr osqp) {
+            solve_osqp(osqp);
+        });
     }
 
 }

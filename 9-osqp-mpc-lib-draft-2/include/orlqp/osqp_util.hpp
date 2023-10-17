@@ -1,6 +1,8 @@
 #ifndef ORLQP_OSQP_UTIL_HPP_
 #define ORLQP_OSQP_UTIL_HPP_
 
+#include <execution>
+
 #include "orlqp/types.hpp"
 #include "orlqp/osqp_solver.hpp"
 #include "orlqp/qp_problem.hpp"
@@ -22,6 +24,9 @@ namespace orlqp
     void update_data(OSQP::Ptr osqp, QPProblem::Ptr qp);
 
     QPSolution::Ptr get_solution(OSQP::Ptr osqp);
+
+    template <auto ExecutionPolicy = std::execution::par>
+    void solve_multi_osqp(std::vector<OSQP::Ptr> osqps);
 
 }
 
