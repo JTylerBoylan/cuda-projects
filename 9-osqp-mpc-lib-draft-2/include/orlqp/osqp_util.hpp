@@ -13,9 +13,15 @@ namespace orlqp
     void to_csc(const EigenSparseMatrix &matrix,
                 OSQPCscMatrix *&M, OSQPInt &Mnnz, OSQPFloat *&Mx, OSQPInt *&Mi, OSQPInt *&Mp);
 
+    OSQPInt setup_osqp(OSQP::Ptr osqp);
+
     OSQPInt solve_osqp(OSQP::Ptr osqp);
 
     OSQPInt update_settings(OSQP::Ptr osqp);
+
+    void update_data(OSQP::Ptr osqp, QPProblem::Ptr qp);
+
+    QPSolution::Ptr get_solution(OSQP::Ptr osqp);
 
 }
 

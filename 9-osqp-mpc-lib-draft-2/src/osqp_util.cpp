@@ -8,19 +8,13 @@ namespace orlqp
         OSQP::Ptr osqp = std::make_shared<OSQP>();
         osqp->settings = new OSQPSettings;
         osqp_set_default_settings(osqp->settings);
-
         osqp->n = qp->num_variables;
         osqp->m = qp->num_constraints;
         osqp->q = qp->gradient.data();
         osqp->l = qp->lower_bound.data();
         osqp->u = qp->upper_bound.data();
-
         to_csc(qp->hessian, osqp->P, osqp->Pnnz, osqp->Px, osqp->Pi, osqp->Pp);
-
         to_csc(qp->linear_constraint, osqp->A, osqp->Annz, osqp->Ax, osqp->Ai, osqp->Ap);
-
-        osqp_setup(&osqp->solver, osqp->P, osqp->q, osqp->A, osqp->l, osqp->u, osqp->m, osqp->n, osqp->settings);
-
         return osqp;
     }
 
@@ -48,14 +42,61 @@ namespace orlqp
         csc_set_data(M, matrix.rows(), matrix.cols(), Mnnz, Mx, Mi, Mp);
     }
 
+    OSQPInt setup_osqp(OSQP::Ptr osqp)
+    {
+        osqp->is_setup = true;
+        return osqp_setup(&osqp->solver, osqp->P, osqp->q, osqp->A, osqp->l, osqp->u, osqp->m, osqp->n, osqp->settings);
+    }
+
     OSQPInt solve_osqp(OSQP::Ptr osqp)
     {
+        if (!osqp->is_setup)
+            setup_osqp(osqp);
         return osqp_solve(osqp->solver);
     }
 
     OSQPInt update_settings(OSQP::Ptr osqp)
     {
         return osqp_update_settings(osqp->solver, osqp->settings);
+    }
+
+    void update_data(OSQP::Ptr osqp, QPProblem::Ptr qp)
+    {
+        if (qp->update.hessian)
+        {
+            to_csc(qp->hessian, osqp->P, osqp->Pnnz, osqp->Px, osqp->Pi, osqp->Pp);
+            osqp_update_data_mat(osqp->solver, osqp->Px, osqp->Pi, osqp->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
+        }
+        if (qp->update.gradient)
+        {
+            osqp->q = qp->gradient.data();
+            osqp_update_data_vec(osqp->solver, osqp->q, OSQP_NULL, OSQP_NULL);
+        }
+        if (qp->update.linear_constraint)
+        {
+            to_csc(qp->linear_constraint, osqp->A, osqp->Annz, osqp->Ax, osqp->Ai, osqp->Ap);
+            osqp_update_data_mat(osqp->solver, osqp->Px, osqp->Pi, osqp->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
+        }
+        if (qp->update.lower_bound)
+        {
+            osqp->l = qp->lower_bound.data();
+            osqp_update_data_vec(osqp->solver, OSQP_NULL, osqp->l, OSQP_NULL);
+        }
+        if (qp->update.upper_bound)
+        {
+            osqp->u = qp->upper_bound.data();
+            osqp_update_data_vec(osqp->solver, OSQP_NULL, OSQP_NULL, osqp->u);
+        }
+    }
+
+    QPSolution::Ptr get_solution(OSQP::Ptr osqp)
+    {
+        QPSolution::Ptr qp_solution = std::make_shared<QPSolution>();
+        qp_solution->xstar = Eigen::Map<EigenVector>(osqp->solver->solution->x, osqp->n);
+        qp_solution->run_time_s = osqp->solver->info->run_time;
+        qp_solution->setup_time_s = osqp->solver->info->setup_time;
+        qp_solution->solve_time_s = osqp->solver->info->solve_time;
+        return qp_solution;
     }
 
 }

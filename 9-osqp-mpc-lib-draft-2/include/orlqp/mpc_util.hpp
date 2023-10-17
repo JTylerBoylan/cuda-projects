@@ -41,7 +41,7 @@ namespace orlqp
                         const EigenVector &x_min, const EigenVector &x_max,
                         const EigenVector &u_min, const EigenVector &u_max);
 
-    void update_initial_state(const int Nx, EigenVector &lb, EigenVector &ub, const EigenVector &x0);
+    void update_initial_state(QPProblem::Ptr qp, const int Nx, const EigenVector &x0);
 
 }
 

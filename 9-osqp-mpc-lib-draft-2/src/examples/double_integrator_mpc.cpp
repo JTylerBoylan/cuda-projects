@@ -9,7 +9,7 @@
 #define NUMBER_OF_NODES 11
 
 #define POSITION_ERROR_COST_WEIGHT 1.0
-#define VELOCITY_ERROR_COST_WEIGHT 0.0
+#define VELOCITY_ERROR_COST_WEIGHT 1.0
 #define FORCE_COST_WEIGHT 0.0
 
 #define HORIZON_TIME 1.0
@@ -27,7 +27,7 @@ using namespace orlqp;
 int main()
 {
     EigenVector x0(NUMBER_OF_STATES), xf(NUMBER_OF_STATES);
-    x0 << 1.0, 0.0;
+    x0 << -4.0, 0.0;
     xf << 0.0, 0.0;
 
     auto mpc = create_mpc(NUMBER_OF_STATES, NUMBER_OF_CONTROLS, NUMBER_OF_NODES);
@@ -47,9 +47,27 @@ int main()
     auto osqp = qp2osqp(qp);
 
     osqp->settings->verbose = true;
-    update_settings(osqp);
-    
+    osqp->settings->warm_starting = true;
+    osqp->settings->polishing = true;
+
     solve_osqp(osqp);
+
+    auto qp_solution = get_solution(osqp);
+
+    std::cout << "xstar:\n"
+              << qp_solution->xstar << "\n";
+
+    x0 << 2.0, 0.0;
+    update_initial_state(qp, NUMBER_OF_STATES, x0);
+
+    update_data(osqp, qp);
+
+    solve_osqp(osqp);
+
+    qp_solution = get_solution(osqp);
+
+    std::cout << "xstar:\n"
+              << qp_solution->xstar << "\n";
 
     return 0;
 }

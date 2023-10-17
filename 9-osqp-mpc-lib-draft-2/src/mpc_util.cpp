@@ -160,9 +160,11 @@ namespace orlqp
         ub.block(Neq, 0, Nineq, 1) = upper_inequality;
     }
 
-    void update_initial_state(const int Nx, EigenVector &lb, EigenVector &ub, const EigenVector &x0)
+    void update_initial_state(QPProblem::Ptr qp, const int Nx, const EigenVector &x0)
     {
-        lb.block(0, 0, Nx, 1) = -x0;
-        ub.block(0, 0, Nx, 1) = -x0;
+        qp->lower_bound.block(0, 0, Nx, 1) = -x0;
+        qp->upper_bound.block(0, 0, Nx, 1) = -x0;
+        qp->update.lower_bound = true;
+        qp->update.upper_bound = true;
     }
 }

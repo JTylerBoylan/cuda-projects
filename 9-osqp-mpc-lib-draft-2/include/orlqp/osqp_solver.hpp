@@ -16,7 +16,8 @@ namespace orlqp
 
         OSQPSolver *solver = nullptr;
         OSQPSettings *settings = nullptr;
-        OSQPSolution *solution = nullptr;
+
+        bool is_setup = false;
 
         OSQPFloat *q = nullptr;
         OSQPFloat *l = nullptr;
@@ -44,7 +45,6 @@ namespace orlqp
             delete P;
             delete A;
             delete settings;
-            delete solution;
         }
     };
 

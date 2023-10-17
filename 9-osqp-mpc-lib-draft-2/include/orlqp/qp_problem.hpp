@@ -5,6 +5,16 @@
 
 namespace orlqp
 {
+
+    struct QPProblemUpdate
+    {
+        bool hessian = false,
+             gradient = false,
+             linear_constraint = false,
+             lower_bound = false,
+             upper_bound = false;
+    };
+
     struct QPProblem
     {
         /*
@@ -29,6 +39,8 @@ namespace orlqp
         EigenVector lower_bound;
         EigenVector upper_bound;
 
+        QPProblemUpdate update;
+
         QPProblem(const int n, const int m)
             : num_variables(n), num_constraints(m)
         {
@@ -42,6 +54,8 @@ namespace orlqp
 
     struct QPSolution
     {
+        using Ptr = std::shared_ptr<QPSolution>;
+
         float run_time_s;
         float setup_time_s;
         float solve_time_s;

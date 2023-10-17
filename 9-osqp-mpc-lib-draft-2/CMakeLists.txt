@@ -15,6 +15,6 @@ target_sources(orlqp PRIVATE
 target_include_directories(orlqp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Add the executable
-add_executable(main src/examples/main.cpp)
-target_include_directories(main PUBLIC include)
-target_link_libraries(main PUBLIC stdc++ stdc++fs m orlqp osqp::osqp)
+add_executable(double_integrator_mpc src/examples/double_integrator_mpc.cpp)
+target_include_directories(double_integrator_mpc PUBLIC include)
+target_link_libraries(double_integrator_mpc PUBLIC stdc++ stdc++fs m orlqp osqp::osqp)
