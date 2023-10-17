@@ -12,6 +12,9 @@ namespace orlqp
 
     QPProblem::Ptr mpc2qp(const MPCProblem::Ptr mpc);
 
+    MPCSolution::Ptr get_mpc_solution(const int Nx, const int Nu, const int Nn,
+                                      const QPSolution::Ptr qp_solution);
+
     void to_hessian(const int n,
                     EigenSparseMatrix &H,
                     const int Nx, const int Nu, const int Nn,

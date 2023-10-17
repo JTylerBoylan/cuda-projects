@@ -48,6 +48,17 @@ namespace orlqp
         }
     };
 
+    struct MPCSolution
+    {
+        using Ptr = std::shared_ptr<MPCSolution>;
+
+        float run_time_s;
+        float setup_time_s;
+        float solve_time_s;
+        EigenVector xstar;
+        EigenVector ustar;
+    };
+
 }
 
 #endif

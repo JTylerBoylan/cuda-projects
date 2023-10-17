@@ -24,6 +24,18 @@ namespace orlqp
         return qp;
     }
 
+    MPCSolution::Ptr get_mpc_solution(const int Nx, const int Nu, const int Nn,
+                                      const QPSolution::Ptr qp_solution)
+    {
+        auto mpc_solution = std::make_shared<MPCSolution>();
+        mpc_solution->run_time_s = qp_solution->run_time_s;
+        mpc_solution->setup_time_s = qp_solution->setup_time_s;
+        mpc_solution->solve_time_s = qp_solution->solve_time_s;
+        mpc_solution->xstar = qp_solution->xstar.block(0, 0, Nx * (Nn + 1), 1);
+        mpc_solution->ustar = qp_solution->xstar.block(Nx * (Nn + 1), 0, Nu * Nn, 1);
+        return mpc_solution;
+    }
+
     void to_hessian(const int n,
                     EigenSparseMatrix &H,
                     const int Nx, const int Nu, const int Nn,

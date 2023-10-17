@@ -28,6 +28,8 @@ namespace orlqp
     template <auto ExecutionPolicy = std::execution::par>
     void solve_multi_osqp(std::vector<OSQP::Ptr> osqps);
 
+    void run_mpc_osqp(OSQP::Ptr osqp, QPProblem::Ptr qp);
+
 }
 
 #endif

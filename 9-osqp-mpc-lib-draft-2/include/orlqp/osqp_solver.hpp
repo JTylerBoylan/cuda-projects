@@ -18,6 +18,7 @@ namespace orlqp
         OSQPSettings *settings = nullptr;
 
         bool is_setup = false;
+        bool ok = true;
 
         OSQPFloat *q = nullptr;
         OSQPFloat *l = nullptr;

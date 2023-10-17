@@ -80,6 +80,14 @@ namespace orlqp
             osqp_update_data_mat(osqp->solver, osqp->Px, osqp->Pi, osqp->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
             qp->update.linear_constraint = false;
         }
+        if (qp->update.lower_bound && qp->update.upper_bound)
+        {
+            osqp->u = qp->upper_bound.data();
+            osqp->l = qp->lower_bound.data();
+            osqp_update_data_vec(osqp->solver, OSQP_NULL, osqp->l, osqp->u);
+            qp->update.lower_bound = false;
+            qp->update.upper_bound = false;
+        }
         if (qp->update.lower_bound)
         {
             osqp->l = qp->lower_bound.data();
@@ -110,6 +118,16 @@ namespace orlqp
         std::for_each(ExecutionPolicy, osqps.begin(), osqps.end(), [&](OSQP::Ptr osqp) {
             solve_osqp(osqp);
         });
+    }
+
+    void run_mpc_osqp(OSQP::Ptr osqp, QPProblem::Ptr qp)
+    {
+        setup_osqp(osqp);
+        while (osqp->ok)
+        {
+            solve_osqp(osqp);
+            update_data(osqp, qp);
+        }
     }
 
 }
