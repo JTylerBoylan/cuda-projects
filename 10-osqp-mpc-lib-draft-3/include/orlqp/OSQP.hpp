@@ -1,17 +1,41 @@
 #ifndef ORLQP_OSQP_SOLVER_HPP_
 #define ORLQP_OSQP_SOLVER_HPP_
 
+#include <execution>
+
 #include "orlqp/types.hpp"
 #include "osqp/osqp.h"
+#include "orlqp/QPProblem.hpp"
 
 namespace orlqp
 {
 
-    struct OSQP
+    class OSQP
     {
-
+    public:
         using Ptr = std::shared_ptr<OSQP>;
 
+        OSQP();
+
+        ~OSQP()
+        {
+            osqp_cleanup(solver);
+            delete P;
+            delete A;
+            delete settings;
+        }
+
+        OSQPInt solve();
+
+        OSQPInt setupFromQP(const QPProblem::Ptr qp);
+
+        OSQPInt updateFromQP(const QPProblem::Ptr qp);
+
+        OSQPInt updateSettings();
+
+        QPSolution::Ptr getQPSolution();
+
+    private:
         OSQPInt n, m;
 
         OSQPSolver *solver = nullptr;
@@ -36,13 +60,8 @@ namespace orlqp
         OSQPInt *Ai = nullptr;
         OSQPInt *Ap = nullptr;
 
-        ~OSQP()
-        {
-            osqp_cleanup(solver);
-            delete P;
-            delete A;
-            delete settings;
-        }
+        void convertEigenSparseToCSC(const EigenSparseMatrix &matrix,
+                                     OSQPCscMatrix *&M, OSQPInt &Mnnz, OSQPFloat *&Mx, OSQPInt *&Mi, OSQPInt *&Mp);
     };
 
 }
