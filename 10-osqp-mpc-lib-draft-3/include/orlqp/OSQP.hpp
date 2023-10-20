@@ -17,25 +17,34 @@ namespace orlqp
 
         OSQP();
 
-        ~OSQP()
-        {
-            osqp_cleanup(solver);
-            delete P;
-            delete A;
-            delete settings;
-        }
+        ~OSQP();
+
+        bool isOK() { return ok; }
 
         OSQPInt solve();
 
-        OSQPInt setupFromQP(const QPProblem::Ptr qp);
+        bool isSetup() { return is_setup; }
 
-        OSQPInt updateFromQP(const QPProblem::Ptr qp);
+        OSQPInt setup(QPProblem::Ptr qp);
 
-        OSQPInt updateSettings();
+        OSQPInt update();
 
         QPSolution::Ptr getQPSolution();
 
+        OSQPSolver *getSolver()
+        {
+            return solver;
+        }
+
+        OSQPSettings *getSettings()
+        {
+            this->update_settings = true;
+            return settings;
+        }
+
     private:
+        QPProblem::Ptr QP;
+
         OSQPInt n, m;
 
         OSQPSolver *solver = nullptr;
@@ -43,6 +52,7 @@ namespace orlqp
 
         bool is_setup = false;
         bool ok = true;
+        bool update_settings = false;
 
         OSQPFloat *q = nullptr;
         OSQPFloat *l = nullptr;

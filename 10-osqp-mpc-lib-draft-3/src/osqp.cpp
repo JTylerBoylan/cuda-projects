@@ -9,6 +9,14 @@ namespace orlqp
         osqp_set_default_settings(this->settings);
     }
 
+    OSQP::~OSQP()
+    {
+        osqp_cleanup(solver);
+        delete P;
+        delete A;
+        delete settings;
+    }
+
     OSQPInt OSQP::solve()
     {
         if (!this->is_setup)
@@ -17,8 +25,10 @@ namespace orlqp
         return osqp_solve(this->solver);
     }
 
-    OSQPInt OSQP::setupFromQP(const QPProblem::Ptr qp)
+    OSQPInt OSQP::setup(QPProblem::Ptr qp)
     {
+
+        this->QP = qp;
 
         if (this->is_setup)
             osqp_cleanup(this->solver);
@@ -38,53 +48,53 @@ namespace orlqp
         return osqp_setup(&this->solver, this->P, this->q, this->A, this->l, this->u, this->m, this->n, this->settings);
     }
 
-    OSQPInt OSQP::updateFromQP(const QPProblem::Ptr qp)
+    OSQPInt OSQP::update()
     {
         OSQPInt flag;
-        if (qp->update.hessian)
+        if (QP->update.hessian)
         {
-            qp->update.hessian = false;
-            convertEigenSparseToCSC(qp->hessian, this->P, this->Pnnz, this->Px, this->Pi, this->Pp);
+            QP->update.hessian = false;
+            convertEigenSparseToCSC(QP->hessian, this->P, this->Pnnz, this->Px, this->Pi, this->Pp);
             flag = osqp_update_data_mat(this->solver, this->Px, this->Pi, this->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
         }
-        if (qp->update.gradient)
+        if (QP->update.gradient)
         {
-            qp->update.gradient = false;
-            this->q = qp->gradient.data();
+            QP->update.gradient = false;
+            this->q = QP->gradient.data();
             flag = osqp_update_data_vec(this->solver, this->q, OSQP_NULL, OSQP_NULL);
         }
-        if (qp->update.linear_constraint)
+        if (QP->update.linear_constraint)
         {
-            qp->update.linear_constraint = false;
-            convertEigenSparseToCSC(qp->linear_constraint, this->A, this->Annz, this->Ax, this->Ai, this->Ap);
+            QP->update.linear_constraint = false;
+            convertEigenSparseToCSC(QP->linear_constraint, this->A, this->Annz, this->Ax, this->Ai, this->Ap);
             flag = osqp_update_data_mat(this->solver, this->Px, this->Pi, this->Pnnz, OSQP_NULL, OSQP_NULL, OSQP_NULL);
         }
-        if (qp->update.lower_bound && qp->update.upper_bound)
+        if (QP->update.lower_bound && QP->update.upper_bound)
         {
-            qp->update.lower_bound = false;
-            qp->update.upper_bound = false;
-            this->u = qp->upper_bound.data();
-            this->l = qp->lower_bound.data();
+            QP->update.lower_bound = false;
+            QP->update.upper_bound = false;
+            this->u = QP->upper_bound.data();
+            this->l = QP->lower_bound.data();
             flag = osqp_update_data_vec(this->solver, OSQP_NULL, this->l, this->u);
         }
-        if (qp->update.lower_bound)
+        if (QP->update.lower_bound)
         {
-            qp->update.lower_bound = false;
-            this->l = qp->lower_bound.data();
+            QP->update.lower_bound = false;
+            this->l = QP->lower_bound.data();
             flag = osqp_update_data_vec(this->solver, OSQP_NULL, this->l, OSQP_NULL);
         }
-        if (qp->update.upper_bound)
+        if (QP->update.upper_bound)
         {
-            qp->update.upper_bound = false;
-            this->u = qp->upper_bound.data();
+            QP->update.upper_bound = false;
+            this->u = QP->upper_bound.data();
             flag = osqp_update_data_vec(this->solver, OSQP_NULL, OSQP_NULL, this->u);
         }
+        if (this->update_settings)
+        {
+            this->update_settings = false;
+            flag = osqp_update_settings(this->solver, this->settings);
+        }
         return flag;
-    }
-
-    OSQPInt OSQP::updateSettings()
-    {
-        return osqp_update_settings(this->solver, this->settings);
     }
 
     QPSolution::Ptr OSQP::getQPSolution()

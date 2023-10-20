@@ -59,18 +59,7 @@ namespace orlqp
                  u_bounds = false;
         } update;
 
-        MPCProblem(const int Nx, const int Nu, const int N)
-            : num_states(Nx), num_controls(Nu), num_nodes(N)
-        {
-            state_objective.resize(Nx, Nx);
-            control_objective.resize(Nu, Nu);
-            state_dynamics.resize(Nx, Nx);
-            control_dynamics.resize(Nx, Nu);
-            x_min.resize(Nx);
-            x_max.resize(Nx);
-            u_min.resize(Nu);
-            u_max.resize(Nu);
-        }
+        MPCProblem(const int Nx, const int Nu, const int N);
 
         QPProblem::Ptr getQP();
 
@@ -81,7 +70,7 @@ namespace orlqp
         void setDesiredState(const EigenVector &xf);
 
     private:
-        QPProblem::Ptr qp_problem;
+        QPProblem::Ptr QP;
 
         void calculateQPHessian();
 
