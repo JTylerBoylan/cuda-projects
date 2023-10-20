@@ -105,6 +105,7 @@ int main()
             const time_t duration = std::chrono::duration_cast<std::chrono::microseconds>(cend - cstart).count();
             const double kHz = (double)(k * 1E3) / (double)(duration);
             std::cout << "f = " << kHz << " kHz\n";
+            std::cout << "----------------------\n";
         }
     }
 

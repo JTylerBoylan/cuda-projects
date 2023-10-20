@@ -84,9 +84,11 @@ int main()
         {
             const time_t duration = std::chrono::duration_cast<std::chrono::microseconds>(cend - cstart).count();
             const double kHz = (double)(k * 1E3) / (double)(duration);
+            std::cout << "----------------------\n";
             std::cout << "f = " << kHz << " kHz\n";
             std::cout << "x0: [" << x0.transpose() << "]\n"
-                      << "u0: [" << u0 << "]\n\n";
+                      << "u0: [" << u0 << "]\n";
+            std::cout << "----------------------\n";
         }
     }
 
