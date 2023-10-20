@@ -35,6 +35,35 @@ namespace orlqp
         return this->QP;
     }
 
+    void MPCProblem::updateQP()
+    {
+        if (this->update.state_objective || this->update.control_objective)
+        {
+            this->calculateQPHessian();
+            this->update.control_objective = false;
+        }
+        if (this->update.state_objective || this->update.xf)
+        {
+            this->calculateQPGradient();
+            this->update.state_objective = false;
+            this->update.xf = false;
+        }
+        if (this->update.state_dynamics || this->update.control_dynamics)
+        {
+            this->calculateQPLinearConstraint();
+            this->update.state_dynamics = false;
+            this->update.control_dynamics = false;
+        }
+        if (this->update.x_bounds || this->update.u_bounds || this->update.x0)
+        {
+            this->calculateQPLowerBound();
+            this->calculateQPUpperBound();
+            this->update.x_bounds = false;
+            this->update.u_bounds = false;
+            this->update.x0 = false;
+        }
+    }
+
     MPCSolution::Ptr MPCProblem::getMPCSolution(QPSolution::Ptr qp_solution)
     {
         const int Nx = this->num_states;

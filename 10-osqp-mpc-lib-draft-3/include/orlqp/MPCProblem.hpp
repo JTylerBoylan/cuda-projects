@@ -56,12 +56,16 @@ namespace orlqp
                  state_dynamics = false,
                  control_dynamics = false,
                  x_bounds = false,
-                 u_bounds = false;
+                 u_bounds = false,
+                 x0 = false,
+                 xf = false;
         } update;
 
         MPCProblem(const int Nx, const int Nu, const int N);
 
         QPProblem::Ptr getQP();
+
+        void updateQP();
 
         MPCSolution::Ptr getMPCSolution(QPSolution::Ptr qp_solution);
 
