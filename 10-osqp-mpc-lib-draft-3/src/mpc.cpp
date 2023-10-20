@@ -6,29 +6,32 @@ namespace orlqp
     MPCProblem::MPCProblem(const int Nx, const int Nu, const int N)
         : num_states(Nx), num_controls(Nu), num_nodes(N)
     {
-        state_objective.resize(Nx, Nx);
-        control_objective.resize(Nu, Nu);
-        state_dynamics.resize(Nx, Nx);
-        control_dynamics.resize(Nx, Nu);
-        x_min.resize(Nx);
-        x_max.resize(Nx);
-        u_min.resize(Nu);
-        u_max.resize(Nu);
+        this->state_objective.resize(Nx, Nx);
+        this->control_objective.resize(Nu, Nu);
+        this->state_dynamics.resize(Nx, Nx);
+        this->control_dynamics.resize(Nx, Nu);
+        this->x_min.resize(Nx);
+        this->x_max.resize(Nx);
+        this->u_min.resize(Nu);
+        this->u_max.resize(Nu);
     }
 
     QPProblem::Ptr MPCProblem::getQP()
     {
-        const int Nx = this->num_states;
-        const int Nu = this->num_controls;
-        const int Nn = this->num_nodes;
-        const int n = Nx * (Nn + 1) + Nu * Nn;
-        const int m = 2 * Nx * (Nn + 1) + Nu * Nn;
-        this->QP = std::make_shared<QPProblem>(n, m);
-        this->calculateQPHessian();
-        this->calculateQPGradient();
-        this->calculateQPLinearConstraint();
-        this->calculateQPLowerBound();
-        this->calculateQPUpperBound();
+        if (!this->QP)
+        {
+            const int Nx = this->num_states;
+            const int Nu = this->num_controls;
+            const int Nn = this->num_nodes;
+            const int n = Nx * (Nn + 1) + Nu * Nn;
+            const int m = 2 * Nx * (Nn + 1) + Nu * Nn;
+            this->QP = std::make_shared<QPProblem>(n, m);
+            this->calculateQPHessian();
+            this->calculateQPGradient();
+            this->calculateQPLinearConstraint();
+            this->calculateQPLowerBound();
+            this->calculateQPUpperBound();
+        }
         return this->QP;
     }
 
@@ -48,11 +51,12 @@ namespace orlqp
 
     void MPCProblem::setInitialState(const EigenVector &x0)
     {
+        this->x0 = x0;
         const int Nx = this->num_states;
-        QP->lower_bound.block(0, 0, Nx, 1) = -x0;
-        QP->upper_bound.block(0, 0, Nx, 1) = -x0;
-        QP->update.lower_bound = true;
-        QP->update.upper_bound = true;
+        this->QP->lower_bound.block(0, 0, Nx, 1) = -x0;
+        this->QP->upper_bound.block(0, 0, Nx, 1) = -x0;
+        this->QP->update.lower_bound = true;
+        this->QP->update.upper_bound = true;
     }
 
     void MPCProblem::setDesiredState(const EigenVector &xf)
