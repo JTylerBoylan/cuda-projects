@@ -6,6 +6,8 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(orlqp REQUIRED)
 
+list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
 include_directories(include)
 
 add_executable(orlqp_lip_node src/orlqp_lip_node.cpp)
