@@ -9,6 +9,8 @@
 
 #define NUM_STATES 2
 #define NUM_CONTROLS 1
+#define NUM_NODES 15
+#define TIME_HORIZON 1.0F
 
 int main(int argc, char **argv)
 {
@@ -16,7 +18,7 @@ int main(int argc, char **argv)
 
     // Set up MPC
     using namespace orlqp;
-    MPCProblem::Ptr MPC = std::make_shared<MPCProblem>();
+    MPCProblem::Ptr MPC = std::make_shared<MPCProblem>(NUM_STATES, NUM_CONTROLS, NUM_NODES);
     /**
      *
      * TODO: Setup MPC
@@ -79,6 +81,7 @@ int main(int argc, char **argv)
             */
 
             cmd_pub->publish(*latest_cmd);
+            latest_msg = nullptr;
         });
     RCLCPP_INFO(node->get_logger(), "Running MPC with a period of %lu ms", duration_cast<milliseconds>(PUBLISH_PERIOD).count());
 
