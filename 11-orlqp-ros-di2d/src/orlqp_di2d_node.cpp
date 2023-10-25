@@ -2,10 +2,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 
-#define NODE_NAME "orlqp_lip_node"
-#define SUBSCRIBE_TOPIC "/lip/info"
-#define GOAL_TOPIC "/lip/goal"
-#define PUBLISH_TOPIC "/lip/cmd"
+#define NODE_NAME "orlqp_di2d_node"
+#define SUBSCRIBE_TOPIC "/di2d/info"
+#define GOAL_TOPIC "/di2d/goal"
+#define PUBLISH_TOPIC "/di2d/cmd"
 #define PUBLISH_PERIOD 20ms
 
 #define NUM_STATES 4
@@ -98,7 +98,9 @@ int main(int argc, char **argv)
             EigenVector xf_new(NUM_STATES);
             xf_new << pos[0], 0.0, pos[1], 0.0;
 
+            std::cout << "Setting goal state to: " << xf_new.transpose() << "\n";
             MPC->setDesiredState(xf_new);
+
             update_osqp = true;
         });
 
@@ -125,14 +127,14 @@ int main(int argc, char **argv)
 
             osqp->solve();
 
-            QPSolution::Ptr qp_sol = osqp->getQPSolution();
-            MPCSolution::Ptr mpc_sol = MPC->getMPCSolution(qp_sol);
+            const QPSolution::Ptr qp_sol = osqp->getQPSolution();
+            const MPCSolution::Ptr mpc_sol = MPC->getMPCSolution(qp_sol);
 
-            Float *u_data = mpc_sol->ustar.data();
-            std::vector<Float> u_star{u_data, u_data + NUM_CONTROLS};
+            const Float *u_data = mpc_sol->ustar.data();
+            const std::vector<Float> u_star{u_data, u_data + NUM_CONTROLS};
 
             std::cout << "U*: [ ";
-            for (Float u : u_star)
+            for (const Float u : u_star)
                 std::cout << u << " ";
             std::cout << "]\n";
 

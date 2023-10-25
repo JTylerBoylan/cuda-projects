@@ -7,9 +7,9 @@ runROSNode();
 function runROSNode()
 
     node = ros2node("/mpc_matlab");
-    pub = ros2publisher(node, '/lip/info', 'sensor_msgs/JointState');
-    ros2subscriber(node, '/lip/cmd', 'sensor_msgs/JointState', @subCallback);
-    goal_pub = ros2publisher(node, '/lip/goal', 'sensor_msgs/JointState');
+    pub = ros2publisher(node, '/di2d/info', 'sensor_msgs/JointState');
+    ros2subscriber(node, '/di2d/cmd', 'sensor_msgs/JointState', @subCallback);
+    goal_pub = ros2publisher(node, '/di2d/goal', 'sensor_msgs/JointState');
     
     in_msg = ros2message("sensor_msgs/JointState");
     out_msg = ros2message("sensor_msgs/JointState");

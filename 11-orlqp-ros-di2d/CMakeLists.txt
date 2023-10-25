@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(orlqp_lip)
+project(orlqp_di2d)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -10,17 +10,17 @@ list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 include_directories(include)
 
-add_executable(orlqp_lip_node src/orlqp_lip_node.cpp)
-target_link_libraries(orlqp_lip_node
+add_executable(orlqp_di2d_node src/orlqp_di2d_node.cpp)
+target_link_libraries(orlqp_di2d_node
   orlqp::orlqp
 )
-ament_target_dependencies(orlqp_lip_node
+ament_target_dependencies(orlqp_di2d_node
   rclcpp
   sensor_msgs
 )
 
 install(TARGETS
-  orlqp_lip_node
+  orlqp_di2d_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

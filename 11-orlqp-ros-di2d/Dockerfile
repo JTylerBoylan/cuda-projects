@@ -14,13 +14,13 @@ RUN git clone https://github.com/JTylerBoylan/orlqp
 RUN cd orlqp && mkdir build
 RUN cd orlqp/build && cmake ..
 RUN cd orlqp/build && cmake --build . --target install
-
 RUN ldconfig
 
-WORKDIR /ros2_ws/
+ARG WORKSPACE=/ros2_ws/
+WORKDIR $WORKSPACE
 
 ARG USER_UID=1000
 ARG USER_NAME=user
 RUN useradd -m -u $USER_UID $USER_NAME && \
-    chown -R $USER_NAME:$USER_NAME /ros2_ws/
+    chown -R $USER_NAME:$USER_NAME $WORKSPACE
 USER $USER_NAME
