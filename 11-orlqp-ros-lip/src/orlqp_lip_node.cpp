@@ -4,6 +4,7 @@
 
 #define NODE_NAME "orlqp_lip_node"
 #define SUBSCRIBE_TOPIC "/lip/info"
+#define GOAL_TOPIC "/lip/goal"
 #define PUBLISH_TOPIC "/lip/cmd"
 #define PUBLISH_PERIOD 20ms
 
@@ -27,11 +28,11 @@ int main(int argc, char **argv)
     // Set up MPC
     using namespace orlqp;
     MPCProblem::Ptr MPC = std::make_shared<MPCProblem>(NUM_STATES, NUM_CONTROLS, NUM_NODES);
-    MPC->x0 << 0.0, 0.0;
-    MPC->xf << 0.0, 0.0;
-    MPC->state_objective << 1.0, 0.0, 0.0, 0.0,
+    MPC->x0 << 0.0, 0.0, 0.0, 0.0;
+    MPC->xf << 0.0, 0.0, 0.0, 0.0;
+    MPC->state_objective << 10.0, 0.0, 0.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 10.0, 0.0,
         0.0, 0.0, 0.0, 1.0;
     MPC->control_objective << 1.0, 0.0,
         0.0, 1.0;
@@ -63,6 +64,7 @@ int main(int argc, char **argv)
     // Set up state subscriber
     using namespace sensor_msgs::msg;
     JointState::ConstSharedPtr latest_msg = nullptr;
+    bool update_osqp = false;
     auto joint_sub = node->create_subscription<JointState>(
         SUBSCRIBE_TOPIC, 10,
         [&](JointState::ConstSharedPtr msg)
@@ -79,8 +81,26 @@ int main(int argc, char **argv)
             MPC->setInitialState(x0_new);
 
             latest_msg = msg;
+            update_osqp = true;
         });
     RCLCPP_INFO(node->get_logger(), "Subscribing to JointState topic '%s'", SUBSCRIBE_TOPIC);
+
+    // Set up goal subscriber
+    auto goal_sub = node->create_subscription<JointState>(
+        GOAL_TOPIC, 10,
+        [&](JointState::ConstSharedPtr msg)
+        {
+            const std::vector<double> pos = msg->position;
+
+            if (pos.size() != 2)
+                return;
+
+            EigenVector xf_new(NUM_STATES);
+            xf_new << pos[0], 0.0, pos[1], 0.0;
+
+            MPC->setDesiredState(xf_new);
+            update_osqp = true;
+        });
 
     // Set up command publisher
     using namespace std::chrono_literals;
@@ -97,14 +117,24 @@ int main(int argc, char **argv)
             if (!latest_msg)
                 return;
 
-            osqp->update();
+            if (update_osqp)
+            {
+                osqp->update();
+                update_osqp = false;
+            }
+
             osqp->solve();
 
             QPSolution::Ptr qp_sol = osqp->getQPSolution();
             MPCSolution::Ptr mpc_sol = MPC->getMPCSolution(qp_sol);
 
             Float *u_data = mpc_sol->ustar.data();
-            std::vector<double> u_star{u_data, u_data + NUM_CONTROLS};
+            std::vector<Float> u_star{u_data, u_data + NUM_CONTROLS};
+
+            std::cout << "U*: [ ";
+            for (Float u : u_star)
+                std::cout << u << " ";
+            std::cout << "]\n";
 
             latest_cmd->effort = u_star;
 

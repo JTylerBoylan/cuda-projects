@@ -10,6 +10,6 @@ docker run -it --rm \
     --net host \
     --privileged \
     -v $SCRIPT_DIR:/ros2_ws/src/orlqp_lip/ \
-    -w /ros2_ws/src/ \
+    -v /dev/shm:/dev/shm \
     ${PROJECT_NAME} \
     bash
