@@ -12,13 +12,21 @@ function runDoubleIntegrator2DArray(num_problems)
     pub = ros2publisher(node, '/di2d_array/info', 'std_msgs/Float64MultiArray');
     ros2subscriber(node, '/di2d_array/cmd', 'std_msgs/Float64MultiArray', @subCallback);
     goal_pub = ros2publisher(node, '/di2d_array/goal', 'std_msgs/Float64MultiArray');
-    
-    in_msg = ros2message('std_msgs/Float64MultiArray');
-    out_msg = ros2message('std_msgs/Float64MultiArray');
-    in_msg.data = zeros(1, num_problems * 2);
+
+    pause(1.0)
 
     Z0 = (rand(4, num_problems) - 0.5) * 10.0;
     ZF = zeros(4, num_problems);
+
+    in_msg = ros2message('std_msgs/Float64MultiArray');
+    in_msg.data = zeros(1, num_problems * 2);
+
+    out_msg = ros2message('std_msgs/Float64MultiArray');
+
+    goal_msg = ros2message('std_msgs/Float64MultiArray');
+    ZFf = reshape(ZF, [1 4*num_problems]);
+    goal_msg.data = ZFf;
+    send(goal_pub, goal_msg);
 
     figure
     hold on
@@ -77,7 +85,6 @@ function runDoubleIntegrator2DArray(num_problems)
         goal_r = repmat(goal_i, [1 num_problems]);
         goal_f = reshape(goal_r, [1 4*num_problems]);
 
-        goal_msg = ros2message('std_msgs/Float64MultiArray');
         goal_msg.data = goal_f;
 
         set(desired_pos, 'xdata', goal_r(1,:) , 'ydata', goal_r(3,:));

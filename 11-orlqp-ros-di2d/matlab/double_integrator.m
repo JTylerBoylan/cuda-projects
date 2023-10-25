@@ -11,12 +11,19 @@ function runDoubleIntegrator2D()
     ros2subscriber(node, '/di2d/cmd', 'std_msgs/Float64MultiArray', @subCallback);
     goal_pub = ros2publisher(node, '/di2d/goal', 'std_msgs/Float64MultiArray');
     
-    in_msg = ros2message('std_msgs/Float64MultiArray');
-    out_msg = ros2message('std_msgs/Float64MultiArray');
-    in_msg.data = [0; 0];
+    pause(1.0)
 
     Z0 = [1; -1; 1; -1];
     ZF = [0; 0; 0; 0];
+
+    in_msg = ros2message('std_msgs/Float64MultiArray');
+    in_msg.data = [0; 0];
+
+    out_msg = ros2message('std_msgs/Float64MultiArray');
+    
+    goal_msg = ros2message('std_msgs/Float64MultiArray');
+    goal_msg.data = ZF;
+    send(goal_pub, goal_msg);
 
     figure
     hold on
@@ -64,8 +71,7 @@ function runDoubleIntegrator2D()
         point = get(gca, 'CurrentPoint');
         x = point(1, 1);
         y = point(1, 2);
-    
-        goal_msg = ros2message('std_msgs/Float64MultiArray');
+
         goal_msg.data = [x, 0, y, 0];
 
         set(desired_pos, 'xdata', x, 'ydata', y);
