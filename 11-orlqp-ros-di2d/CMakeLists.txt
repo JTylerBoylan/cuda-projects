@@ -3,7 +3,7 @@ project(orlqp_di2d)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(orlqp REQUIRED)
 
 list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
@@ -16,11 +16,21 @@ target_link_libraries(orlqp_di2d_node
 )
 ament_target_dependencies(orlqp_di2d_node
   rclcpp
-  sensor_msgs
+  std_msgs
+)
+
+add_executable(orlqp_di2d_array_node src/orlqp_di2d_array_node.cpp)
+target_link_libraries(orlqp_di2d_array_node
+  orlqp::orlqp
+)
+ament_target_dependencies(orlqp_di2d_array_node
+  rclcpp
+  std_msgs
 )
 
 install(TARGETS
   orlqp_di2d_node
+  orlqp_di2d_array_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

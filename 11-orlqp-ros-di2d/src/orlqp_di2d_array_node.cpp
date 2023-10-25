@@ -2,12 +2,13 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
-#define NODE_NAME "orlqp_di2d_node"
-#define SUBSCRIBE_TOPIC "/di2d/info"
-#define GOAL_TOPIC "/di2d/goal"
-#define PUBLISH_TOPIC "/di2d/cmd"
+#define NODE_NAME "orlqp_di2d_array_node"
+#define SUBSCRIBE_TOPIC "/di2d_array/info"
+#define GOAL_TOPIC "/di2d_array/goal"
+#define PUBLISH_TOPIC "/di2d_array/cmd"
 #define PUBLISH_PERIOD 20ms
 
+#define NUM_PROBLEMS 20
 #define NUM_STATES 4
 #define NUM_CONTROLS 2
 #define NUM_NODES 15
@@ -33,36 +34,48 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
-    // Set up MPC
+    // Set up MPCs
     using namespace orlqp;
-    MPCProblem::Ptr MPC = std::make_shared<MPCProblem>(NUM_STATES, NUM_CONTROLS, NUM_NODES);
-    MPC->x0 << 0.0, 0.0, 0.0, 0.0;
-    MPC->xf << 0.0, 0.0, 0.0, 0.0;
-    MPC->state_objective << 10.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 10.0, 0.0,
-        0.0, 0.0, 0.0, 1.0;
-    MPC->control_objective << 1.0, 0.0,
-        0.0, 1.0;
-    MPC->state_dynamics << 1.0, DELTA_TIME, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, DELTA_TIME,
-        0.0, 0.0, 0.0, 1.0;
-    MPC->control_dynamics << 0.0, 0.0,
-        DELTA_TIME, 0.0,
-        0.0, 0.0,
-        0.0, DELTA_TIME;
-    MPC->x_min << MIN_XY, MIN_VXY, MIN_XY, MIN_VXY;
-    MPC->x_max << MAX_XY, MAX_VXY, MAX_XY, MAX_VXY;
-    MPC->u_min << MIN_AXY, MIN_AXY;
-    MPC->u_max << MAX_AXY, MAX_AXY;
+    std::vector<MPCProblem::Ptr> MPCs(NUM_PROBLEMS);
+    std::vector<QPProblem::Ptr> QPs(NUM_PROBLEMS);
+    for (int p = 0; p < NUM_PROBLEMS; p++)
+    {
+        // Set up MPC
+        MPCProblem::Ptr MPC = std::make_shared<MPCProblem>(NUM_STATES, NUM_CONTROLS, NUM_NODES);
+        MPC->x0 << 0.0, 0.0, 0.0, 0.0;
+        MPC->xf << 0.0, 0.0, 0.0, 0.0;
+        MPC->state_objective << 10.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 10.0, 0.0,
+            0.0, 0.0, 0.0, 1.0;
+        MPC->control_objective << 1.0, 0.0,
+            0.0, 1.0;
+        MPC->state_dynamics << 1.0, DELTA_TIME, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, DELTA_TIME,
+            0.0, 0.0, 0.0, 1.0;
+        MPC->control_dynamics << 0.0, 0.0,
+            DELTA_TIME, 0.0,
+            0.0, 0.0,
+            0.0, DELTA_TIME;
+        MPC->x_min << MIN_XY, MIN_VXY, MIN_XY, MIN_VXY;
+        MPC->x_max << MAX_XY, MAX_VXY, MAX_XY, MAX_VXY;
+        MPC->u_min << MIN_AXY, MIN_AXY;
+        MPC->u_max << MAX_AXY, MAX_AXY;
+
+        MPCs[p] = MPC;
+        QPs[p] = MPC->getQP();
+    }
+
+    // Set up QPArray
+    QPArrayProblem::Ptr QP_array = std::make_shared<QPArrayProblem>(QPs);
 
     // Set up OSQP
     OSQP::Ptr osqp = std::make_shared<OSQP>();
     osqp->getSettings()->verbose = false;
     osqp->getSettings()->warm_starting = false;
     osqp->getSettings()->polishing = false;
-    osqp->setup(MPC->getQP());
+    osqp->setup(QP_array->getQP());
 
     // Set up ROS node
     using namespace rclcpp;
@@ -77,17 +90,20 @@ int main(int argc, char **argv)
         SUBSCRIBE_TOPIC, 10,
         [&](Float64MultiArray::ConstSharedPtr msg)
         {
-            const std::vector<double> state = msg->data;
+            const std::vector<Float> state = msg->data;
 
-            if (state.size() != NUM_STATES)
+            if (state.size() != NUM_PROBLEMS * NUM_STATES)
             {
                 RCLCPP_ERROR(node->get_logger(), "Bad state message: [%s]", vec_to_string(state).c_str());
                 return;
             }
 
-            const Eigen::Map<const EigenVector> x0_new(state.data(), NUM_STATES);
-
-            MPC->setInitialState(x0_new);
+            for (int p = 0; p < NUM_PROBLEMS; p++)
+            {
+                const int idx = p * NUM_STATES;
+                const Eigen::Map<const EigenVector> x0_new(state.data() + idx, NUM_STATES);
+                MPCs[p]->setInitialState(x0_new);
+            }
 
             latest_msg = msg;
             update_osqp = true;
@@ -101,17 +117,20 @@ int main(int argc, char **argv)
         {
             const std::vector<double> goal = msg->data;
 
-            if (goal.size() != NUM_STATES)
+            if (goal.size() != NUM_PROBLEMS * NUM_STATES)
             {
                 RCLCPP_ERROR(node->get_logger(), "Bad goal message: [%s]", vec_to_string(goal).c_str());
                 return;
             }
 
-            const Eigen::Map<const EigenVector> xf_new(goal.data(), NUM_STATES);
+            for (int p = 0; p < NUM_PROBLEMS; p++)
+            {
+                const int idx = p * NUM_STATES;
+                const Eigen::Map<const EigenVector> xf_new(goal.data() + idx, NUM_STATES);
+                MPCs[p]->setDesiredState(xf_new);
+            }
 
-            MPC->setDesiredState(xf_new);
-
-            RCLCPP_INFO(node->get_logger(), "Set goal state to: [%s]", vec_to_string(goal).c_str());
+            RCLCPP_INFO(node->get_logger(), "Updated goal state.");
 
             update_osqp = true;
         });
@@ -133,6 +152,7 @@ int main(int argc, char **argv)
 
             if (update_osqp)
             {
+                QP_array->update();
                 osqp->update();
                 update_osqp = false;
             }
@@ -140,12 +160,21 @@ int main(int argc, char **argv)
             osqp->solve();
 
             const QPSolution::Ptr qp_sol = osqp->getQPSolution();
-            const MPCSolution::Ptr mpc_sol = MPC->getMPCSolution(qp_sol);
+            const std::vector<QPSolution::Ptr> qp_array_sol = QP_array->splitQPSolution(qp_sol);
 
-            const Float *u_data = mpc_sol->ustar.data();
-            const std::vector<Float> u_star(u_data, u_data + NUM_CONTROLS);
+            std::vector<Float> u_star(NUM_PROBLEMS * NUM_CONTROLS);
+            for (int p = 0; p < NUM_PROBLEMS; p++)
+            {
+                const QPSolution::Ptr qp_sol_i = qp_array_sol[p];
+                const MPCSolution::Ptr mpc_sol_i = MPCs[p]->getMPCSolution(qp_sol_i);
 
-            RCLCPP_INFO(node->get_logger(), "Publishing control: [%s]", vec_to_string(u_star).c_str());
+                const Float *u_data_i = mpc_sol_i->ustar.data();
+
+                const int idx = p*NUM_CONTROLS;
+                std::copy_n(u_data_i, NUM_CONTROLS, u_star.begin() + idx);
+            }
+
+            RCLCPP_INFO(node->get_logger(), "Publishing control.");
 
             latest_cmd->data = u_star;
 
