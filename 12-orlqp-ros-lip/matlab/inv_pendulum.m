@@ -49,7 +49,7 @@ function runInvertedPendulum(g, M, m, b, l, I)
                  +pend_height, +pend_height, 0, 0];
     R_pend = @(phi) [cos(phi), -sin(phi); sin(phi), cos(phi)];
 
-    figure
+    figure('Color', [1 1 1], 'Position', [100 200 1200 800]);
     hold on
     grid on
 

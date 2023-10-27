@@ -25,13 +25,13 @@ function runDoubleIntegrator2D()
     goal_msg.data = ZF;
     send(goal_pub, goal_msg);
 
-    figure
+    figure('Color', [1 1 1], 'Position', [100 200 1200 800]);
     hold on
     grid on
     current_pos = plot(Z0(1), Z0(3), 'og', 'MarkerFaceColor', 'g', 'MarkerSize', 10);
     desired_pos = plot(ZF(1), ZF(3), 'xr');
     xlim([-5 5])
-    ylim([-5 5]);
+    ylim([-5 5])
 
     set(gca, 'ButtonDownFcn', @clickCallback);
     set(current_pos, 'PickableParts', 'all');

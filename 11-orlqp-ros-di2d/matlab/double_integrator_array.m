@@ -28,7 +28,7 @@ function runDoubleIntegrator2DArray(num_problems)
     goal_msg.data = ZFf;
     send(goal_pub, goal_msg);
 
-    figure
+    figure('Color', [1 1 1], 'Position', [100 200 1200 800]);
     hold on
     grid on
     current_pos = plot(Z0(1, :), Z0(3, :), 'og', 'MarkerFaceColor', 'g', 'MarkerSize', 10);
