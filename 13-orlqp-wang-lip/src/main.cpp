@@ -13,7 +13,7 @@ int main(void)
 
     const double stride_frequency = 1.0;
     const double stride_length = 1.0;
-    const double delT = 1.0 / (stride_frequency * stride_length);
+    const double delT = 1.0 / (stride_frequency * nodes_per_step);
 
     const double g = 9.81;
     const double z0 = 1.0;
